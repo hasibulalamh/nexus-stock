@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+
+class LoginController extends Controller
+{
+    public function view()
+    {
+        return view('auth.login');
+    }
+
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email'    => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput($request->only('email'));
+        }
+
+        // Throttle key: same email + same IP
+        $key = Str::lower($request->input('email')) . '|' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            return redirect()->back()
+                ->withErrors(['email' => "Too many login attempts. Try again in {$seconds} seconds."])
+                ->withInput($request->only('email'));
+        }
+
+        $credentials = $request->only('email', 'password');
+
+        if (!Auth::attempt($credentials, $request->boolean('remember'))) {
+            RateLimiter::hit($key, 60);
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'The provided credentials do not match our records.'])
+                ->withInput($request->only('email'));
+        }
+
+        $user = Auth::user();
+
+        // Correct password, but the account is disabled
+        if ($user->status !== 'active') {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Your account is inactive. Please contact the administrator.'])
+                ->withInput($request->only('email'));
+        }
+
+        RateLimiter::clear($key);
+        $request->session()->regenerate(); // prevents session fixation
+
+        // Get the first role of the user
+        $role = $user->roles->first();
+
+        // Role has a valid dashboard route: go there
+        if ($role && $role->dashboard_route && Route::has($role->dashboard_route)) {
+            return redirect()->route($role->dashboard_route);
+        }
+
+        // No role, or the role's route does not exist: fall back to the common dashboard
+        return redirect()->route('admin.dashboard');
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
+    }
+}
