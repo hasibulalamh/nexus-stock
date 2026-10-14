@@ -13,6 +13,7 @@ methods were changed. No `git push`, no history rewrite, no `git add -A` / `git 
 ## 1. Commits
 
 ```
+d52624d style(auth): move the login page onto the Nexus token system
 ee78ee5 style(location): remove dead edit and delete controls from the location list
 dbbcd9c style(design-system): fix empty-state cell padding and bootstrap colour leaks
 3be2d61 style(role): redesign role list, create, edit, permission assign and audit log
@@ -196,6 +197,7 @@ visible trade-off against the "subtle border" direction.
 | 6 | permission | `admin/permission/{list,edit}.blade.php` | stray `</nav>` around `links()` removed; duplicate `<!-- Footer -->` comment removed; guard select → read-only `.nx-static` + hidden `guard_name` with its original value (controller only reads `status`) |
 | 7 | role | `admin/role/{list,create,edit,permission-assign,audit-log}.blade.php` | see below |
 | 8 | user edit | **not created** | see below |
+| 9 | auth (login) | `auth/login.blade.php` + `nexus.css` | `d52624d` — moved onto the token system; `<style>` block, gradients, blurred orbs, glass card, `backdrop-filter`, heavy shadow and decorative animation all removed |
 
 ### Role module detail
 
@@ -227,8 +229,10 @@ Fixed inside files touched by this work: every `<style>` block, all duplicated C
 `<script>`/`<link>` tags (Bootstrap bundle ×6, jQuery ×2, FontAwesome + iconpicker CSS/JS
 in `role/create`), all `bg-gradient-primary` card headers, all
 `data-bs-toggle="tooltip"` + `text-bg-*` + `onclick="return confirm"` usages in those files.
+
 No Step 3 commit was needed for those; they shipped with each module's commit. The repairs
-below got their own commits — the first two in `dbbcd9c`, the third in `ee78ee5`:
+below got their own commits — the first two in `dbbcd9c`, the location one in `ee78ee5`,
+the login page in `d52624d`:
 
 * `.nx-empty` on an empty-state `<td>` lost to the generic `.table > tbody > * > *` cell
   padding (specificity), so the empty state rendered tight → added `.table td.nx-empty`.
@@ -240,12 +244,17 @@ below got their own commits — the first two in `dbbcd9c`, the third in `ee78ee
   locations). Both controls were removed, along with the now-empty Actions column; the
   empty-state `colspan` follows to 7. No route, controller or permission was added or
   changed.
+* `d52624d` — `auth/login.blade.php` was moved onto the token system, so the last
+  admin/auth `<style>` block in the panel is gone: gradients, blurred orbs, glass card,
+  `backdrop-filter`, heavy shadow and the float/rise animations all removed, and Bootstrap
+  + FontAwesome + `nexus.css` linked instead of re-declared inline. The page now reuses
+  the panel's form components and `nexus.js`'s submit loading state, so its bespoke
+  spinner CSS and handler were dropped. Form contract untouched (see §3).
 
 **Reported, not fixed** (files outside this task's edits):
 
 | File | Issue |
 | --- | --- |
-| `resources/views/auth/login.blade.php` | `<style>` block with gradients, blurred orbs and glassmorphism, plus hard-coded colours and its own FontAwesome `<link>` — contradicts both the "no `<style>` in views" rule and the "no gradients/glow/blur/glassmorphism" direction |
 | `resources/views/welcome.blade.php` | Laravel's default welcome page, `<style>` block + inline `mix-blend-mode` (not part of the admin panel) |
 | `resources/views/admin/dashboard.blade.php` | inline `style="--c:#14b8a6"`-style tile colours (×4) and `style="height:320px"` |
 | `resources/views/admin/user/create.blade.php` | inline `style="--c:#…"` on section headers (×3), inline `border-top:2px dashed var(--nx-line)` footer |
@@ -265,7 +274,9 @@ below got their own commits — the first two in `dbbcd9c`, the third in `ee78ee
 | Contrast | `python3 /tmp/nx_contrast.py` (parses `nexus.css` tokens) | 46/46 pairs OK, 0 failing |
 | Colour literals in component rules | token-block-stripping script | 0 |
 | Duplicate selectors | selector scan | only the intentional media-query/keyframe/split-property cases |
-| No `<style>` / inline colours / CDN scripts in edited files | `grep` | clean |
+| No `<style>` / inline colours / CDN scripts in edited files | `grep` | clean — only `welcome.blade.php` (Laravel's default page, not in the panel) still has a `<style>` block |
+| No gradient / blur / glass left on the login page | `grep -n 'gradient\|blur\|backdrop\|orb\|style="\|<style>' resources/views/auth/login.blade.php` | clean (the only "blur" match is the JS `blur` event listener) |
+| Login form contract preserved | `grep` for `route('login.submit')`, `@csrf`, `name="email|password|remember"`, `old('email')`, `old('remember')`, `@error`, `session('status')` | all present |
 | No `data-bs-toggle="tooltip"` / `text-bg-*` / `onclick="return confirm"` in edited files | `grep` | clean |
 | No dead controls left | `grep -rn 'href=""\|action=""' resources/views` | none |
 | Location table columns line up | `<th>` count vs empty-state `colspan` | 7 = 7 |
@@ -294,6 +305,9 @@ No browser is available here (`Chrome: not found`) and there is no usable databa
 * keyboard focus rings and tooltips (including the tooltip on keyboard focus);
 * dropdown open animation, toast appearance, skeleton shimmer/`.is-loading`;
 * the new submit-button spinner, and that a back-navigation releases it (`pageshow`);
+* the login page in light and dark mode, at 390px and on a large screen (including the
+  password reveal button alignment against the 44px input, the Caps Lock hint and the
+  submit spinner);
 * the permission-assign grouped cards with real data;
 * the locations AJAX status toggle after a click (class swap + label text);
 * that the icon picker on `role/create` and `role/edit` now initialises at all — see §7.4.
