@@ -4,6 +4,9 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DesignationController;
 use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\LoginController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
@@ -80,6 +83,38 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('create', [LocationController::class, 'create'])->middleware('can:locations.create')->name('create');
         Route::post('store', [LocationController::class, 'store'])->middleware('can:locations.create')->name('store');
         Route::post('change-status', [LocationController::class, 'changeStatus'])->middleware('can:locations.status')->name('changeStatus');
+    });
+
+    // category
+    Route::group(['prefix' => 'categories', 'as' => 'categories.'], function () {
+        Route::get('list', [CategoryController::class, 'list'])->middleware('can:categories.view')->name('list');
+        Route::get('create', [CategoryController::class, 'create'])->middleware('can:categories.create')->name('create');
+        Route::post('store', [CategoryController::class, 'store'])->middleware('can:categories.create')->name('store');
+        Route::get('edit/{category}', [CategoryController::class, 'edit'])->middleware('can:categories.edit')->name('edit');
+        Route::put('update/{category}', [CategoryController::class, 'update'])->middleware('can:categories.edit')->name('update');
+        Route::delete('delete/{category}', [CategoryController::class, 'delete'])->middleware('can:categories.delete')->name('delete');
+        Route::post('generate-slug', [CategoryController::class, 'generateSlug'])->middleware('can:categories.create')->name('generate-slug');
+    });
+
+    // brand
+    Route::group(['prefix' => 'brands', 'as' => 'brands.'], function () {
+        Route::get('list', [BrandController::class, 'list'])->middleware('can:brands.view')->name('list');
+        Route::get('create', [BrandController::class, 'create'])->middleware('can:brands.create')->name('create');
+        Route::post('store', [BrandController::class, 'store'])->middleware('can:brands.create')->name('store');
+        Route::get('edit/{brand}', [BrandController::class, 'edit'])->middleware('can:brands.edit')->name('edit');
+        Route::put('update/{brand}', [BrandController::class, 'update'])->middleware('can:brands.edit')->name('update');
+        Route::delete('delete/{brand}', [BrandController::class, 'delete'])->middleware('can:brands.delete')->name('delete');
+        Route::post('generate-slug', [BrandController::class, 'generateSlug'])->middleware('can:brands.create')->name('generate-slug');
+    });
+
+    // product
+    Route::group(['prefix' => 'products', 'as' => 'products.'], function () {
+        Route::get('list', [ProductController::class, 'list'])->middleware('can:products.view')->name('list');
+        Route::get('create', [ProductController::class, 'create'])->middleware('can:products.create')->name('create');
+        Route::post('store', [ProductController::class, 'store'])->middleware('can:products.create')->name('store');
+        Route::get('edit/{product}', [ProductController::class, 'edit'])->middleware('can:products.edit')->name('edit');
+        Route::put('update/{product}', [ProductController::class, 'update'])->middleware('can:products.edit')->name('update');
+        Route::delete('delete/{product}', [ProductController::class, 'delete'])->middleware('can:products.delete')->name('delete');
     });
 
     // warehouse

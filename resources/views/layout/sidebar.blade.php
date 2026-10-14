@@ -82,6 +82,40 @@
             </ul>
         @endcanany
 
+        {{-- ===== inventory ===== --}}
+        @canany(['products.view', 'categories.view', 'brands.view'])
+            <span class="ns-group">Inventory</span>
+            <ul class="ns-nav">
+                @can('products.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"
+                           href="{{ route('admin.products.list') }}">
+                            <span class="ns-ico"><i class="fas fa-box"></i></span>
+                            <span>Products</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('categories.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
+                           href="{{ route('admin.categories.list') }}">
+                            <span class="ns-ico"><i class="fas fa-folder"></i></span>
+                            <span>Categories</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('brands.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.brands.*') ? 'active' : '' }}"
+                           href="{{ route('admin.brands.list') }}">
+                            <span class="ns-ico"><i class="fas fa-box-open"></i></span>
+                            <span>Brands</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+            </ul>
+        @endcanany
+
         {{-- ===== modules ===== --}}
         @canany(['warehouses.view', 'branches.view'])
             <span class="ns-group">Modules</span>
