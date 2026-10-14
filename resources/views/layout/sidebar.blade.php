@@ -1,95 +1,119 @@
-<nav id="sidebar" class="sidebar js-sidebar">
+
+
+<nav id="sidebar" class="sidebar js-sidebar ns-sidebar">
     <div class="sidebar-content js-simplebar">
-        <a class="sidebar-brand" href="index.html">
-          </a>
 
-        <ul class="sidebar-nav">
-            <li class="sidebar-header">
-                Pages
-            </li>
+        <a class="ns-brand" href="{{ route('admin.dashboard') }}">
+            <span class="ns-logo"><i class="fas fa-cubes"></i></span>
+            <span class="ns-brand-text">
+                <b>Nexus Stock</b>
+                <small>Inventory</small>
+            </span>
+        </a>
 
-            <li class="sidebar-item active">
-                <a class="sidebar-link" href="{{route('admin.dashboard')}}">
-                    <i class="align-middle" data-feather="sliders"></i> <span class="align-middle">Dashboard</span>
+        {{-- ===== main ===== --}}
+        <span class="ns-group">Main</span>
+        <ul class="ns-nav">
+            <li>
+                <a class="ns-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                   style="--c:#6366f1" href="{{ route('admin.dashboard') }}">
+                    <span class="ns-ico"><i class="fas fa-gauge-high"></i></span>
+                    <span>Dashboard</span><i class="ns-dot"></i>
                 </a>
             </li>
-
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{route('admin.roles.list')}}">
-                    <i class="align-middle" data-feather="user-shield"></i> <span class="align-middle">Roles</span>
-                </a>
-            </li>
-
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{route('admin.permissions.list')}}">
-                    <i class="align-middle" data-feather="key"></i> <span class="align-middle">Permissions</span>
-                </a>
-            </li>
-
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{route('admin.departments.list')}}">
-                    <i class="align-middle" data-feather="users"></i> <span class="align-middle"> Departments</span>
-                </a>
-            </li>
-
-            <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('admin.designations.list') }}">
-                    <i class="align-middle" data-feather="users"></i> <span class="align-middle">Designations</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{route('admin.locations.list')}}">
-                    <i class="align-middle" data-feather="map"></i> <span class="align-middle">Locations</span>
-                </a>
-            </li>
-
-            
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{route('admin.users.list')}}">
-                    <i class="align-middle" data-feather="users"></i> <span class="align-middle">Users</span>
-                </a>
-            </li>
-
-            <li class="sidebar-header">
-              Modules
-            </li>
-
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.warehouse.list') }}">
-                    <i class="align-middle" data-feather="warehouse"></i> <span class="align-middle">Warehouses</span>
-                </a>
-            </li>
-
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{route('admin.branch.list')}}">
-                    <i class="align-middle" data-feather="building"></i> <span class="align-middle">Branch</span>
-                </a>
-            </li>
-
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="">
-                    <i class="align-middle" data-feather="list"></i> <span class="align-middle">Categories</span>
-                </a>
-            </li>
-
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="">
-                    <i class="align-middle" data-feather="brand"></i> <span class="align-middle">Brands</span>
-                </a>
-            </li>
-
         </ul>
 
-        <div class="sidebar-cta">
-            <div class="sidebar-cta-content">
-                <strong class="d-inline-block mb-2">Upgrade to Pro</strong>
-                <div class="mb-3 text-sm">
-                    Are you looking for more components? Check out our premium version.
-                </div>
-                <div class="d-grid">
-                    <a href="upgrade-to-pro.html" class="btn btn-primary">Upgrade to Pro</a>
-                </div>
-            </div>
+        {{-- ===== administration ===== --}}
+        @canany(['roles.view', 'permissions.view', 'users.view', 'departments.view', 'designations.view', 'locations.view'])
+            <span class="ns-group">Administration</span>
+            <ul class="ns-nav">
+                @can('users.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
+                           style="--c:#14b8a6" href="{{ route('admin.users.list') }}">
+                            <span class="ns-ico"><i class="fas fa-users"></i></span>
+                            <span>Users</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('roles.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
+                           style="--c:#f43f5e" href="{{ route('admin.roles.list') }}">
+                            <span class="ns-ico"><i class="fas fa-user-shield"></i></span>
+                            <span>Roles</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('permissions.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.permissions.*') ? 'active' : '' }}"
+                           style="--c:#f59e0b" href="{{ route('admin.permissions.list') }}">
+                            <span class="ns-ico"><i class="fas fa-key"></i></span>
+                            <span>Permissions</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('departments.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.departments.*') ? 'active' : '' }}"
+                           style="--c:#8b5cf6" href="{{ route('admin.departments.list') }}">
+                            <span class="ns-ico"><i class="fas fa-sitemap"></i></span>
+                            <span>Departments</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('designations.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.designations.*') ? 'active' : '' }}"
+                           style="--c:#ec4899" href="{{ route('admin.designations.list') }}">
+                            <span class="ns-ico"><i class="fas fa-id-badge"></i></span>
+                            <span>Designations</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('locations.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}"
+                           style="--c:#0ea5e9" href="{{ route('admin.locations.list') }}">
+                            <span class="ns-ico"><i class="fas fa-map-location-dot"></i></span>
+                            <span>Locations</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+            </ul>
+        @endcanany
+
+        {{-- ===== modules ===== --}}
+        @canany(['warehouses.view', 'branches.view'])
+            <span class="ns-group">Modules</span>
+            <ul class="ns-nav">
+                @can('warehouses.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.warehouse.*') ? 'active' : '' }}"
+                           style="--c:#f97316" href="{{ route('admin.warehouse.list') }}">
+                            <span class="ns-ico"><i class="fas fa-warehouse"></i></span>
+                            <span>Warehouses</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('branches.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.branch.*') ? 'active' : '' }}"
+                           style="--c:#22c55e" href="{{ route('admin.branch.list') }}">
+                            <span class="ns-ico"><i class="fas fa-store"></i></span>
+                            <span>Branches</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+            </ul>
+        @endcanany
+
+        {{-- ===== footer card ===== --}}
+        <div class="ns-foot">
+            <span class="role">{{ auth()->user()->getRoleNames()->first() ?? 'No role' }}</span>
+            <div class="name">{{ auth()->user()->full_name }}</div>
+            <div class="ver">Nexus Stock v1.0</div>
         </div>
     </div>
 </nav>

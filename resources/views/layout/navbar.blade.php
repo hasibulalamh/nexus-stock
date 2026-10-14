@@ -1,148 +1,16 @@
-<style>
-    :root {
-  --nav-bg: #ffffff;
-  --nav-fg: #1e293b;
-  --nav-muted: #64748b;
-  --nav-chip: #f1f5f9;
-  --nav-border: #e2e8f0;
-  --accent-1: #20c997;
-  --accent-2: #6f42c1;
-  --accent-3: #f43f5e;
-  --page-bg: #f5f7fb;
-  --card-bg: #ffffff;
-  --page-fg: #1e293b;
-}
-
-[data-theme="dark"] {
-  --nav-bg: #111827;
-  --nav-fg: #e5e7eb;
-  --nav-muted: #94a3b8;
-  --nav-chip: #1f2937;
-  --nav-border: #2b3547;
-  --page-bg: #0b1220;
-  --card-bg: #151e2e;
-  --page-fg: #e5e7eb;
-}
-
-/* ---------- navbar ---------- */
-.app-navbar {
-  background: var(--nav-bg) !important;
-  color: var(--nav-fg);
-  position: relative;
-  border-bottom: 1px solid var(--nav-border);
-  box-shadow: 0 6px 24px -12px rgba(111, 66, 193, .45);
-}
-.app-navbar::before {
-  content: "";
-  position: absolute; inset: 0 0 auto 0; height: 3px;
-  background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
-  background-size: 300% 100%;
-  animation: navflow 8s linear infinite;
-}
-@keyframes navflow { to { background-position: 300% 0; } }
-
-.app-navbar .sidebar-toggle .hamburger,
-.app-navbar .sidebar-toggle .hamburger::before,
-.app-navbar .sidebar-toggle .hamburger::after { background: var(--nav-fg); }
-
-.app-search {
-  position: relative; align-items: center; gap: .6rem;
-  background: var(--nav-chip); border: 1px solid var(--nav-border);
-  border-radius: 999px; padding: .35rem .9rem; min-width: 280px; margin-left: .5rem;
-  transition: box-shadow .2s, border-color .2s;
-}
-.app-search:focus-within {
-  border-color: var(--accent-2);
-  box-shadow: 0 0 0 4px rgba(111, 66, 193, .18);
-}
-.app-search i { color: var(--nav-muted); font-size: .85rem; }
-.app-search input {
-  flex: 1; border: 0; outline: 0; background: transparent; color: var(--nav-fg); font-size: .9rem;
-}
-.app-search kbd {
-  background: var(--card-bg); color: var(--nav-muted); border: 1px solid var(--nav-border);
-  border-radius: 6px; padding: 0 .4rem; font-size: .72rem; box-shadow: none;
-}
-
-.app-clock {
-  display: flex; align-items: center; gap: .5rem;
-  padding: .35rem .8rem; border-radius: 999px;
-  background: linear-gradient(135deg, rgba(32,201,151,.15), rgba(111,66,193,.15));
-  color: var(--nav-fg); font-weight: 600; font-size: .85rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.app-icon-btn {
-  width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 12px; border: 1px solid var(--nav-border);
-  background: var(--nav-chip); color: var(--nav-fg); cursor: pointer;
-  transition: transform .15s, background .2s, color .2s, border-color .2s;
-}
-.app-icon-btn:hover {
-  transform: translateY(-2px) rotate(-4deg);
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-  border-color: transparent; color: #fff;
-}
-
-.app-user {
-  display: flex; align-items: center; gap: .65rem;
-  padding: .25rem .8rem .25rem .25rem; border-radius: 999px;
-  background: var(--nav-chip); border: 1px solid var(--nav-border);
-  color: var(--nav-fg); text-decoration: none;
-}
-.app-user::after { margin-left: .2rem; }
-.app-user img {
-  width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
-  padding: 2px; background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-3));
-}
-.app-user-name { font-weight: 700; font-size: .85rem; color: var(--nav-fg); }
-.app-user-role {
-  font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--accent-2); font-weight: 700; margin-top: 3px;
-}
-[data-theme="dark"] .app-user-role { color: var(--accent-1); }
-
-.app-dropdown {
-  background: var(--card-bg); border: 1px solid var(--nav-border);
-  border-radius: 14px; box-shadow: 0 20px 40px -12px rgba(0,0,0,.35); padding: .4rem;
-}
-.app-dropdown .dropdown-item { color: var(--nav-fg); border-radius: 8px; }
-.app-dropdown .dropdown-item:hover { background: var(--nav-chip); }
-.app-dropdown .dropdown-divider { border-color: var(--nav-border); }
-.app-dropdown-head {
-  padding: .6rem .9rem; font-size: .78rem; font-weight: 700;
-  letter-spacing: .04em; color: var(--nav-muted);
-}
-
-/* ---------- dark mode: page surfaces ---------- */
-[data-theme="dark"] body,
-[data-theme="dark"] .main,
-[data-theme="dark"] .content { background: var(--page-bg) !important; color: var(--page-fg); }
-[data-theme="dark"] .card { background: var(--card-bg); color: var(--page-fg); border-color: var(--nav-border); }
-[data-theme="dark"] .table { color: var(--page-fg); --bs-table-bg: transparent; --bs-table-hover-bg: rgba(255,255,255,.04); border-color: var(--nav-border); }
-[data-theme="dark"] .table > :not(caption) > * > * { border-bottom-color: var(--nav-border); }
-[data-theme="dark"] .bg-light { background: var(--nav-chip) !important; color: var(--page-fg); }
-[data-theme="dark"] .form-control,
-[data-theme="dark"] .form-select { background: var(--nav-chip); color: var(--page-fg); border-color: var(--nav-border); }
-[data-theme="dark"] .footer { background: var(--nav-bg); color: var(--nav-muted); }
-[data-theme="dark"] .footer a { color: var(--nav-muted); }
-[data-theme="dark"] .page-link { background: var(--card-bg); border-color: var(--nav-border); color: var(--page-fg); }
-[data-theme="dark"] .text-dark { color: var(--page-fg) !important; }
-[data-theme="dark"] .modal-content { background: var(--card-bg); color: var(--page-fg); }
-</style>
-
-
 <nav class="navbar navbar-expand navbar-light navbar-bg app-navbar">
-    <a class="sidebar-toggle js-sidebar-toggle">
+    <a class="sidebar-toggle js-sidebar-toggle" aria-label="Toggle sidebar">
         <i class="hamburger align-self-center"></i>
     </a>
 
-    {{-- search --}}
-    <form class="app-search d-none d-md-flex" onsubmit="return false;">
-        <i class="fas fa-search"></i>
-        <input type="text" placeholder="Search anything..." aria-label="Search">
-        <kbd>/</kbd>
-    </form>
+    {{-- search: goes to the users list --}}
+    @can('users.view')
+        <form class="app-search d-none d-md-flex" method="GET" action="{{ route('admin.users.list') }}" role="search">
+            <i class="fas fa-search"></i>
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Search users..." aria-label="Search users">
+            <kbd>/</kbd>
+        </form>
+    @endcan
 
     <div class="navbar-collapse collapse">
         <ul class="navbar-nav navbar-align align-items-center gap-1">
@@ -157,21 +25,21 @@
 
             {{-- fullscreen --}}
             <li class="nav-item d-none d-md-block">
-                <button type="button" class="app-icon-btn" id="fullscreenBtn" title="Fullscreen">
+                <button type="button" class="app-icon-btn" id="fullscreenBtn" title="Fullscreen" aria-label="Toggle fullscreen">
                     <i class="fas fa-expand"></i>
                 </button>
             </li>
 
             {{-- theme toggle --}}
             <li class="nav-item">
-                <button type="button" class="app-icon-btn" id="themeToggle" title="Toggle dark mode">
+                <button type="button" class="app-icon-btn" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
                     <i class="fas fa-moon" id="themeIcon"></i>
                 </button>
             </li>
 
             {{-- notifications (real data comes later) --}}
             <li class="nav-item dropdown">
-                <a class="app-icon-btn" href="#" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                <a class="app-icon-btn" href="#" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" aria-label="Notifications">
                     <i class="fas fa-bell"></i>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end app-dropdown p-0" style="min-width: 280px;">
@@ -215,8 +83,7 @@
     var root = document.documentElement;
     var icon = document.getElementById('themeIcon');
     function paint() {
-        var dark = root.getAttribute('data-theme') === 'dark';
-        icon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
+        icon.className = root.getAttribute('data-theme') === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
     }
     paint();
     document.getElementById('themeToggle').addEventListener('click', function () {
@@ -239,12 +106,13 @@
         else document.exitFullscreen();
     });
 
-    // "/" focuses search
+    // "/" focuses the search box (only if it exists on this page)
     document.addEventListener('keydown', function (e) {
         var tag = (e.target.tagName || '').toLowerCase();
-        if (e.key === '/' && tag !== 'input' && tag !== 'textarea') {
+        var search = document.querySelector('.app-search input');
+        if (e.key === '/' && search && tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
             e.preventDefault();
-            document.querySelector('.app-search input').focus();
+            search.focus();
         }
     });
 })();
