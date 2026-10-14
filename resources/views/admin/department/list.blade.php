@@ -1,113 +1,98 @@
 @extends('layout.master')
 
 @section('content')
+<div class="container-fluid p-0">
 
-<style>
-  .dept-card {
-    border: 0;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .dept-card .card-header {
-    background: linear-gradient(135deg, #6f42c1, #20c997);
-    color: #fff;
-    padding: 1rem 1.25rem;
-  }
-  .table thead th {
-    font-weight: 600;
-    letter-spacing: .3px;
-    text-transform: uppercase;
-    font-size: .8rem;
-    background: #f8f9fa;
-    border-bottom: 0;
-  }
-  .status-dot {
-    width: .5rem; height: .5rem; display: inline-block; border-radius: 50%;
-    margin-right: .4rem;
-  }
-  .dot-active { background: #28a745; }
-  .dot-inactive { background: #6c757d; }
-  .action-btns .btn {
-    border-radius: 999px;
-  }
-  .table-hover tbody tr:hover {
-    background: #fbfbff;
-  }
-</style>
-
-<div class="container my-4">
-  <div class="card dept-card">
-    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <h5 class="mb-0"><i class="fa-solid fa-building me-2"></i>Department Management</h5>
-      <a href="{{ route('admin.departments.create') }}" class="btn btn-light btn-sm">
-        <i class="fa-solid fa-plus me-1"></i>Create Department
-      </a>
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Administration</small>Departments</h1>
+      <p class="nx-sub">Manage the departments used across the organisation</p>
     </div>
+    @can('departments.create')
+      <a href="{{ route('admin.departments.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add department
+      </a>
+    @endcan
+  </div>
 
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table align-middle table-hover mb-0">
-          <thead>
+  <div class="card" data-loading-target>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle nx-table">
+        <thead>
+          <tr>
+            <th scope="col" class="d-none d-md-table-cell">ID</th>
+            <th scope="col">Department</th>
+            <th scope="col">Code</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($departments as $department)
             <tr>
-              <th style="width: 80px;">ID</th>
-              <th>Department Name</th>
-              <th>Department Code</th>
-              <th style="width: 160px;">Status</th>
-              <th style="width: 160px;" class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-           @foreach ($departments as $department)
-            <tr>
-              <td>{{ $department->id }}</td>
-              <td>{{ $department->name }}</td>
-              <td>{{ $department->code }}</td>
+              <td class="text-muted d-none d-md-table-cell">{{ $department->id }}</td>
+
+              <td><div class="nx-user-name">{{ $department->name }}</div></td>
+
+              <td><span class="nx-code">{{ $department->code }}</span></td>
+
               <td>
-                @if ($department->status == 'active')
-                <span class="status-dot dot-active"></span>
-                <span class="badge text-bg-success">Active</span>
-                @elseif ($department->status == 'inactive')
-                <span class="status-dot dot-inactive"></span>
-                <span class="badge text-bg-danger">Inactive</span>
+                @if($department->status == 'active')
+                  <span class="badge bg-success">Active</span>
+                @elseif($department->status == 'inactive')
+                  <span class="badge bg-danger">Inactive</span>
                 @endif
               </td>
+
               <td class="text-end">
-                <div class="d-flex gap-2 justify-content-end">
-                  <a href="{{ route('admin.departments.edit', $department->id) }}" class="btn btn-outline-primary btn-sm rounded-circle" data-bs-toggle="tooltip" data-bs-title="Edit" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-regular fa-pen-to-square"></i>
-                  </a>
-                  <form action="{{ route('admin.departments.delete', $department->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-outline-danger rounded-circle" data-bs-toggle="tooltip" data-bs-title="Delete" onclick="return confirm('Are you sure you want to delete this role?')">
-                      <i class="fa-regular fa-trash-can"></i>
-                    </button>
-                  </form>
+                <div class="d-inline-flex gap-1">
+                  @can('departments.edit')
+                    <a href="{{ route('admin.departments.edit', $department->id) }}" class="nx-action"
+                       data-tip="Edit" aria-label="Edit {{ $department->name }}">
+                      <i class="fas fa-pen"></i>
+                    </a>
+                  @endcan
+
+                  @can('departments.delete')
+                    <form action="{{ route('admin.departments.delete', $department->id) }}" method="POST"
+                          data-confirm="This will permanently delete {{ $department->name }}. This cannot be undone."
+                          data-confirm-title="Delete department?">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="nx-action danger" data-tip="Delete"
+                              aria-label="Delete {{ $department->name }}">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  @endcan
                 </div>
               </td>
             </tr>
-          @endforeach
-          </tbody>
-        </table>
-      </div>
+          @empty
+            <tr>
+              <td colspan="5" class="nx-empty">
+                <i class="fas fa-sitemap"></i>
+                <div class="nx-empty-title">No departments found</div>
+                <div class="nx-empty-sub">Add your first department to get started.</div>
+                @can('departments.create')
+                  <a href="{{ route('admin.departments.create') }}" class="btn btn-light btn-sm mt-3">
+                    <i class="fas fa-plus"></i> Add department
+                  </a>
+                @endcan
+              </td>
+            </tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
 
-      <!-- Footer -->
-      <div class="p-3 d-flex justify-content-between align-items-center">
-        <small class="text-muted">Showing <strong> {{ $departments->total() }}</strong> departments</small>
-        <nav>
-          <ul class="pagination pagination-sm mb-0">
-            {{ $departments->links() }}
-          </ul>
-        </nav>
-      </div>
+    <div class="nx-footer-bar">
+      <small class="text-muted">
+        Showing <strong>{{ $departments->firstItem() ?? 0 }}-{{ $departments->lastItem() ?? 0 }}</strong>
+        of <strong>{{ $departments->total() }}</strong> departments
+      </small>
+      @if($departments->hasPages()) {{ $departments->links() }} @endif
     </div>
   </div>
 </div>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
-</script>
 @endsection

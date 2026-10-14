@@ -1,90 +1,85 @@
 @extends('layout.master')
 
 @section('content')
+<div class="container-fluid p-0">
 
-<style>
-  .dept-form-card {
-    border: 0;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .dept-form-card .card-header {
-    background: linear-gradient(135deg, #20c997, #6f42c1);
-    color: #fff;
-    padding: 1rem 1.25rem;
-  }
-  .form-label {
-    font-weight: 500;
-    color: #495057;
-  }
-  .form-control, .form-select {
-    border-radius: .6rem;
-    padding: .6rem .9rem;
-  }
-  .btn-gradient {
-    background: linear-gradient(135deg, #20c997, #6f42c1);
-    border: 0;
-    color: #fff;
-    border-radius: .6rem;
-    transition: all .3s ease;
-  }
-  .btn-gradient:hover {
-    opacity: .9;
-    transform: translateY(-2px);
-  }
-</style>
-
-<div class="container my-4">
-  <div class="card dept-form-card">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <h5 class="mb-0"><i class="fa-solid fa-plus-circle me-2"></i>Create Department</h5>
-      <a href="{{ route('admin.departments.list') }}" class="btn btn-light btn-sm"><i class="fa-solid fa-list me-1"></i>Department List</a>
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Administration</small>Create Department</h1>
+      <p class="nx-sub">Add a department and its short code</p>
     </div>
+    <a href="{{ route('admin.departments.list') }}" class="btn btn-light">
+      <i class="fas fa-arrow-left"></i> Back
+    </a>
+  </div>
 
+  @if($errors->any())
+    <div class="alert alert-danger">
+      <strong><i class="fas fa-triangle-exclamation"></i> Please fix the following:</strong>
+      <ul class="mb-0 mt-1">
+        @foreach($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
+  <div class="card">
     <div class="card-body">
       <form action="{{ route('admin.departments.store') }}" method="POST">
         @csrf
         <div class="row g-3">
 
-          <!-- Department Name -->
-          <div class="col-md-6">
-            <label class="form-label">Department Name <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="deptName" name="name" placeholder="Enter Department Name" required>
+          <div class="col-12">
+            <div class="nx-section"><i class="fas fa-sitemap"></i> Department Details</div>
+            <hr>
           </div>
 
-          <!-- Department Code -->
-          <div class="col-md-6">
-            <label class="form-label">Department Code</label>
-            <input type="text" class="form-control" id="deptCode" name="code" placeholder="Auto-generated" readonly>
+          <div class="col-12 col-md-6">
+            <label class="form-label required" for="deptName">Department Name</label>
+            <input type="text" class="form-control @error('name') is-invalid @enderror" id="deptName"
+                   name="name" value="{{ old('name') }}" placeholder="Enter department name" required>
+            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <!-- Status -->
-          <div class="col-md-6">
-            <label class="form-label">Status <span class="text-danger">*</span></label>
-            <select class="form-select" name="status" required>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+          <div class="col-12 col-md-6">
+            <label class="form-label required" for="deptCode">Department Code</label>
+            <input type="text" class="form-control @error('code') is-invalid @enderror" id="deptCode"
+                   name="code" value="{{ old('code') }}" placeholder="Auto-generated" readonly>
+            @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label required" for="status">Status</label>
+            <select class="form-select @error('status') is-invalid @enderror" id="status" name="status" required>
+              <option value="active" @selected(old('status', 'active') === 'active')>Active</option>
+              <option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
             </select>
+            @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <!-- Action Buttons -->
-          <div class="col-12 d-flex justify-content-end gap-2 mt-3">
-            <button type="reset" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-left me-1"></i>Reset</button>
-            <button type="submit" class="btn btn-gradient"><i class="fa-solid fa-save me-1"></i>Save Department</button>
-          </div>
+        </div>
 
+        <div class="nx-form-actions">
+          <button type="reset" class="btn btn-outline-secondary">
+            <i class="fas fa-rotate-left"></i> Reset
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-floppy-disk"></i> Save Department
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
+@endsection
 
+@section('scripts')
 <script>
   const deptNameInput = document.getElementById('deptName');
   const deptCodeInput = document.getElementById('deptCode');
 
-  deptNameInput.addEventListener('input', function() {
+  deptNameInput.addEventListener('input', function () {
     const name = deptNameInput.value.trim();
     if (name.length === 0) {
       deptCodeInput.value = '';
@@ -101,5 +96,4 @@
     deptCodeInput.value = code;
   });
 </script>
-
 @endsection
