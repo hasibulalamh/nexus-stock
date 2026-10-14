@@ -3,16 +3,24 @@
 Scope: a polish pass on the shared Nexus Stock design system, then application of that
 system to every remaining admin view, committed module by module.
 
-Hard constraints respected throughout: views + CSS/JS only. No routes, controllers,
-models, migrations, permissions, middleware, form field names, form actions or HTTP
-methods were changed. No `git push`, no history rewrite, no `git add -A` / `git add .`
-(every commit stages explicit paths).
+Hard constraints for the polish pass itself: views + CSS/JS only. No routes, controllers,
+models, migrations, permissions, middleware or HTTP methods were changed. No `git push`,
+no history rewrite, no `git add -A` / `git add .` (every commit stages explicit paths).
+
+**One deliberate, explicitly-requested exception** (a separate later task, commits
+`906e7b5` and `97ecd51`): `UserController` gained the `edit()`/`update()` methods its
+routes already pointed at, and `resources/views/admin/user/edit.blade.php` was created.
+Everything else remains views + CSS/JS.
 
 ---
 
 ## 1. Commits
 
 ```
+f53e646 style(layout): take the dashboard chart fill from a token
+97ecd51 style(welcome): drop the last <style> block and inline mix-blend-mode
+906e7b5 feat(users): add the edit and update actions the routes already pointed at
+3b1a1b7 style(views): tokenise the last inline colours so no view holds a colour literal
 d52624d style(auth): move the login page onto the Nexus token system
 ee78ee5 style(location): remove dead edit and delete controls from the location list
 dbbcd9c style(design-system): fix empty-state cell padding and bootstrap colour leaks
@@ -196,8 +204,9 @@ visible trade-off against the "subtle border" direction.
 | 5 | warehouse | `warehouse/{list,create,edit}.blade.php` | inactive badge `bg-secondary` → `bg-danger` for cross-module consistency |
 | 6 | permission | `admin/permission/{list,edit}.blade.php` | stray `</nav>` around `links()` removed; duplicate `<!-- Footer -->` comment removed; guard select → read-only `.nx-static` + hidden `guard_name` with its original value (controller only reads `status`) |
 | 7 | role | `admin/role/{list,create,edit,permission-assign,audit-log}.blade.php` | see below |
-| 8 | user edit | **not created** | see below |
+| 8 | user edit | `admin/user/edit.blade.php` (new) + `UserController` | `906e7b5` — created **later, on explicit request**, together with the missing `edit()`/`update()` methods (see below) |
 | 9 | auth (login) | `auth/login.blade.php` + `nexus.css` | `d52624d` — moved onto the token system; `<style>` block, gradients, blurred orbs, glass card, `backdrop-filter`, heavy shadow and decorative animation all removed |
+| 10 | welcome | `welcome.blade.php` | `97ecd51` — the last `<style>` block (a Tailwind v4 dump) and the inline `mix-blend-mode` removed; rebuilt on the auth shell classes (see §4) |
 
 ### Role module detail
 
@@ -211,15 +220,15 @@ visible trade-off against the "subtle border" direction.
   the `$role` being edited (so the icon and status fields fell back to the last role in
   the list); the parent `<select>` used `.form-control` instead of `.form-select`.
 
-### User edit — not created
+### User edit — the routes used to point at nothing
 
-`app/Http/Controllers/Admin/UserController.php` contains only `list()`, `create()` and
-`store()`; it has no `edit()`/`update()` method and nothing references
-`view('admin.user.edit')`. `routes/web.php` does declare `admin.users.edit` and
-`admin.users.update` (both mapped to those non-existent methods), and the users list
-links an Edit action at them, so **those two routes 500 today**. Per instruction
-("if the controller does not reference it, tell me and do not create it") the view was
-not created.
+At the time of the polish pass, `UserController` contained only `list()`, `create()` and
+`store()`: `routes/web.php` declared `admin.users.edit` and `admin.users.update` against
+methods that did not exist, and the users list linked an Edit action at them, so **both
+routes 500ed**. Per instruction it was reported rather than invented. It was then added in a
+separate, explicitly-requested step (`906e7b5`): `edit()` + `update()` plus
+`admin/user/edit.blade.php`, which mirrors `user/create` and reuses only existing classes.
+See §7.9 for the behaviour decisions and §7.11 for the delete route, which is still missing.
 
 ---
 
@@ -232,7 +241,8 @@ in `role/create`), all `bg-gradient-primary` card headers, all
 
 No Step 3 commit was needed for those; they shipped with each module's commit. The repairs
 below got their own commits — the first two in `dbbcd9c`, the location one in `ee78ee5`,
-the login page in `d52624d`:
+the login page in `d52624d`, the welcome page in `97ecd51`, the user edit form in
+`906e7b5`, the chart colours in `f53e646`:
 
 * `.nx-empty` on an empty-state `<td>` lost to the generic `.table > tbody > * > *` cell
   padding (specificity), so the empty state rendered tight → added `.table td.nx-empty`.
@@ -244,6 +254,12 @@ the login page in `d52624d`:
   locations). Both controls were removed, along with the now-empty Actions column; the
   empty-state `colspan` follows to 7. No route, controller or permission was added or
   changed.
+* `f53e646` — the dashboard line chart's area gradient (`rgba(215, 227, 244, 1)` /
+  `…, 0)`) and its two invisible grid lines (`rgba(0,0,0,0.0)`) were the last hard-coded
+  colours left in a view, inline in `layout/master.blade.php`'s `<script>`. A `--chart-fill`
+  token was added and the alpha is now applied in JS from it; the grid lines use the same
+  `"transparent"` keyword the bar chart in the same file already used. Verified the helper
+  produces byte-identical colours for the current token, so the chart looks the same.
 * `d52624d` — `auth/login.blade.php` was moved onto the token system, so the last
   admin/auth `<style>` block in the panel is gone: gradients, blurred orbs, glass card,
   `backdrop-filter`, heavy shadow and the float/rise animations all removed, and Bootstrap
@@ -265,13 +281,27 @@ the login page in `d52624d`:
     `style="height:auto"` → removed, `style="width:auto"` → Bootstrap's `w-auto` utility.
   * `layout/sidebar.blade.php` — the unused `style="--c:#…"` literals (nothing read `--c`
     on `.ns-link`) were already dropped earlier in the branch.
+* `97ecd51` — `welcome.blade.php` (Laravel's default landing page) was the last view still
+  holding styling: a ~200-line Tailwind v4 dump inside a `<style>` block plus inline
+  `mix-blend-mode` on its decorative SVG. It is now a small standalone page on the same
+  token system and auth-shell classes as the login page (`.nx-auth`, `.nx-auth-card`,
+  `.nx-auth-brand`, `.ns-logo`, `btn btn-primary`, `.nx-auth-foot`) with its own theme
+  toggle on `nexus.js`. No `<style>`, no inline styles, no Tailwind, no external font
+  bundle. **Judgement call:** the Laravel-brand SVG artwork was dropped, because the
+  Tailwind utilities and the `<style>` block were the only thing styling it. Note the page
+  is also unreachable — `GET /` always redirects (`routes/web.php` line 16).
+* `906e7b5` — `UserController::edit()` / `update()` added, with
+  `resources/views/admin/user/edit.blade.php`, because `admin.users.edit` and
+  `admin.users.update` were registered and linked from the user list but had no controller
+  methods. The form mirrors `user/create` and reuses only existing classes
+  (`.nx-section`, `.nx-static`, `.nx-form-actions`, `.nx-avatar`).
 
-**Reported, not fixed** (files outside this task's edits):
+**Reported, not fixed:**
 
 | File | Issue |
 | --- | --- |
-| `resources/views/welcome.blade.php` | Laravel's default welcome page, `<style>` block + inline `mix-blend-mode` (not part of the admin panel) |
 | `permission/create.blade.php` | correctly absent; not recreated |
+| `DELETE admin/users/delete/{id}` | `UserController@delete` **still does not exist**, and the list's delete button submits to it — see §7.11 |
 
 ---
 
@@ -279,21 +309,23 @@ the login page in `d52624d`:
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Blade compiles | `php artisan view:cache` | "Blade templates cached successfully" (all 30 blade files → 67 compiled templates, observed during the run then cleared) |
-| Compiled template syntax | `php -l` over all 67 compiled templates in `storage/framework/views` | 0 syntax errors |
+| Blade compiles | `php artisan view:cache` | "Blade templates cached successfully" (all 31 blade files → 68 compiled templates, observed during the run then cleared) |
+| Compiled template syntax | `php -l` over all 68 compiled templates in `storage/framework/views` | 0 syntax errors |
+| Every route action resolves | script booting the app and checking `method_exists()` for each controller action | all resolvable **except** `UserController@delete` (pre-existing, see §7.11) |
 | View cache clear | `php artisan view:clear` | OK |
 | JS syntax | `node --check public/assets/js/nexus.js` | syntax OK |
 | Contrast | `python3 /tmp/nx_contrast.py` (parses `nexus.css` tokens) | 48/48 pairs OK, 0 failing |
 | Colour literals in component rules | token-block-stripping script | 0 |
 | Duplicate selectors | selector scan | only the intentional media-query/keyframe/split-property cases |
-| No `<style>` / inline colours / CDN scripts in edited files | `grep` | clean — only `welcome.blade.php` (Laravel's default page, not in the panel) still has a `<style>` block |
+| No `<style>` block or inline style anywhere in `resources/views` | `grep -rn '<style'` / `grep -rn 'style="'` | **none** |
+| No hard-coded colour value in any view | `grep -rniE '#[0-9a-f]{3,8}\b\|rgba?\(\s*[0-9]\|hsla?\(\s*[0-9]' resources/views` | **none** — the only `rgba(` left is a JS function that builds the string from `--chart-fill` |
+| Inline chart scripts still parse | `node --check` over the blade-directive-free inline `<script>` blocks in `master.blade.php` | JS syntax OK (6 blocks) |
 | No gradient / blur / glass left on the login page | `grep -n 'gradient\|blur\|backdrop\|orb\|style="\|<style>' resources/views/auth/login.blade.php` | clean (the only "blur" match is the JS `blur` event listener) |
 | Login form contract preserved | `grep` for `route('login.submit')`, `@csrf`, `name="email|password|remember"`, `old('email')`, `old('remember')`, `@error`, `session('status')` | all present |
 | No `data-bs-toggle="tooltip"` / `text-bg-*` / `onclick="return confirm"` in edited files | `grep` | clean |
 | No dead controls left | `grep -rn 'href=""\|action=""' resources/views` | none |
 | Location table columns line up | `<th>` count vs empty-state `colspan` | 7 = 7 |
 | Custom classes used in views exist in CSS | script comparing `nx-`/`ns-`/`app-` classes | 0 missing (incl. new `.nx-stat-*`, `.nx-col-num`, `.nx-form-actions`) |
-| No inline style or colour literal in panel views | `grep -rn 'style="'` / `grep -rn '#[0-9A-Fa-f]\{6\}'` over `resources/views` | none outside `welcome.blade.php` |
 | Icon-only controls have `aria-label` | script (PHP `->` aware) | 0 missing |
 | Routes unchanged | `php artisan route:list` | 63 total / 57 admin — identical to before |
 | Test suite | `php artisan test` | 46 failed / 9 passed — **byte-identical to baseline `639c3bf`**, re-run in a throwaway `git worktree` |
@@ -323,7 +355,17 @@ No browser is available here (`Chrome: not found`) and there is no usable databa
   submit spinner);
 * the permission-assign grouped cards with real data;
 * the locations AJAX status toggle after a click (class swap + label text);
-* that the icon picker on `role/create` and `role/edit` now initialises at all — see §7.4.
+* that the icon picker on `role/create` and `role/edit` now initialises at all — see §7.4;
+* the new **user edit form** (`admin/user/edit.blade.php`), especially the read-only
+  Employee ID row, the avatar beside the file input at 390px, and the layout when a
+  validation error is shown;
+* the **rewritten welcome page** — note it is unreachable through `GET /` (which redirects),
+  so it only appears if you render the view directly;
+* the **dashboard line chart** after the `--chart-fill` change (`f53e646`). The helper was
+  unit-checked in node and reproduces the previous colours exactly, but the rendering itself
+  was not observed. `--chart-fill` is defined only in `:root`, so dark mode keeps today's
+  light tint — the status quo; add a `[data-theme="dark"]` override if a darker fill is
+  wanted.
 
 ---
 
@@ -355,3 +397,20 @@ No browser is available here (`Chrome: not found`) and there is no usable databa
    `view/create/status`, so locations are CSV-imported and status-toggled by design. If you
    do want location CRUD, that is a separate feature (routes + controller + validation +
    permission entries) and was deliberately not invented here.
+9. **User `edit`/`update` design decisions** (`906e7b5`, requested separately from the
+   polish pass): the Employee ID is treated as immutable (the create form generates it from
+   department/designation/role/name) and is shown read-only instead of as an editable input,
+   so `update()` neither validates nor writes it; the password is optional on update and is
+   only written when a value is supplied (the `User` model's `hashed` cast does the hashing);
+   a role change goes through `syncRoles([$name])` because a user holds exactly one role via
+   `role_id`; and a replacement profile photo is written without deleting the previous file,
+   matching the existing `store()` behaviour. Email uniqueness ignores the current row
+   (`unique:users,email,{$id}`). If any of those should differ, say so and it is a small change.
+10. **`--chart-fill` is deliberately theme-agnostic** (`f53e646`): it lives only in `:root`,
+    so the dashboard line-chart fill is the same pale tint in light and dark mode, exactly as
+    before the change. It is now a one-line change if you want a darker dark-mode fill.
+11. **`UserController@delete` is still missing.** `admin.users.delete` is registered, the
+    `users.delete` permission is seeded, and the user list renders a delete button that
+    submits to it — so that button still 500s, exactly as before. This round was scoped to
+    "edit and update", and deletion needs its own decisions (self-delete guard, what happens
+    to a user's warehouses/relations), so it was **not** added unilaterally.
