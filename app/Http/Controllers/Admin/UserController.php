@@ -113,4 +113,84 @@ class UserController extends Controller
             ->route('admin.users.list')
             ->with('success', '✅ User created successfully!');
     }
+
+    // Edit form
+    public function edit($id)
+    {
+        $user = User::with('roles')->findOrFail($id);
+        $roles = Role::all();
+        $departments = Department::all();
+        $designations = Designation::all();
+
+        return view('admin.user.edit', compact('user', 'roles', 'departments', 'designations'));
+    }
+
+    // Update existing user
+    public function update(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'full_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'password' => 'nullable|min:8|max:255|confirmed',
+            'phone' => 'required|numeric|digits:11',
+            'gender' => 'required|in:male,female',
+            'role_id' => 'required|exists:roles,id',
+            'department_id' => 'required|exists:departments,id',
+            'designation_id' => 'required|exists:designations,id',
+            'join_date' => 'required|date',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10240',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        // Employee ID is generated on create and stays fixed afterwards.
+        $attributes = [
+            'full_name' => $request->full_name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'gender' => $request->gender,
+            'role_id' => $request->role_id,
+            'department_id' => $request->department_id,
+            'designation_id' => $request->designation_id,
+            'join_date' => $request->join_date,
+            'status' => $request->status,
+        ];
+
+        // Only touch the password when a new one was supplied (the model's
+        // `hashed` cast takes care of hashing it).
+        if ($request->filled('password')) {
+            $attributes['password'] = $request->password;
+        }
+
+        // Handle a replacement profile photo
+        if ($request->hasFile('profile_photo')) {
+            $uploadPath = public_path('uploads/user');
+            if (!File::exists($uploadPath)) {
+                File::makeDirectory($uploadPath, 0777, true, true);
+            }
+
+            $profile_photo = $request->file('profile_photo');
+            $filename = time() . '.' . $profile_photo->getClientOriginalExtension();
+            $profile_photo->move($uploadPath, $filename);
+
+            $attributes['profile_photo'] = $filename;
+        }
+
+        $user->update($attributes);
+
+        // A user holds a single role, so replace the old one when it changed.
+        $role = Role::find($request->role_id);
+        if ($role && !$user->hasRole($role->name)) {
+            $user->syncRoles([$role->name]);
+        }
+
+        return redirect()
+            ->route('admin.users.list')
+            ->with('success', '✅ User updated successfully!');
+    }
 }
