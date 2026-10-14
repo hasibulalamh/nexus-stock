@@ -237,6 +237,30 @@ class UserController extends Controller
         return redirect()->route('admin.users.list')->with('success', 'User deleted');
     }
 
+    // Restrict (status != active) / restore an account
+    public function toggleStatus($id)
+    {
+        $user = User::findOrFail($id);
+
+        $newStatus = $user->status === 'active' ? 'inactive' : 'active';
+        $action = $newStatus === 'active' ? 'restore' : 'restrict';
+
+        if ($error = $this->guardStatusChange($user, $action)) {
+            return redirect()->back()->with('error', $error);
+        }
+
+        // Restricting kills the sessions right away; the active-check middleware
+        // covers any session created afterwards.
+        if ($newStatus === 'inactive') {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+        }
+
+        $user->update(['status' => $newStatus]);
+
+        return redirect()->route('admin.users.list')
+            ->with('success', $newStatus === 'active' ? 'User restored' : 'User restricted');
+    }
+
     /**
      * Shared guards for delete / restrict / restore.
      * Returns an error message when the action is not allowed, null otherwise.

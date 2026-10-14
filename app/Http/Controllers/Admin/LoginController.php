@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -41,6 +43,17 @@ class LoginController extends Controller
 
         $credentials = $request->only('email', 'password');
 
+        // Restricted account: refuse with the same message whether or not the
+        // password was correct, so the reply reveals nothing about it.
+        $existing = User::where('email', $request->email)->first();
+        if ($existing && $existing->status !== 'active') {
+            RateLimiter::hit($key, 60);
+
+            return redirect()->route('login')
+                ->withErrors(['email' => EnsureUserIsActive::MESSAGE])
+                ->withInput($request->only('email'));
+        }
+
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::hit($key, 60);
 
@@ -51,14 +64,15 @@ class LoginController extends Controller
 
         $user = Auth::user();
 
-        // Correct password, but the account is disabled
+        // Defence in depth: the pre-check above already refuses restricted
+        // accounts before the password is ever verified.
         if ($user->status !== 'active') {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->withErrors(['email' => 'Your account is inactive. Please contact the administrator.'])
+                ->withErrors(['email' => EnsureUserIsActive::MESSAGE])
                 ->withInput($request->only('email'));
         }
 

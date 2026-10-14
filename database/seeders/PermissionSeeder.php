@@ -17,7 +17,7 @@ class PermissionSeeder extends Seeder
         $modules = [
             'roles'        => ['view', 'create', 'edit', 'delete', 'assign'],
             'permissions'  => ['view', 'edit'],
-            'users'        => ['view', 'create', 'edit', 'delete'],
+            'users'        => ['view', 'create', 'edit', 'delete', 'status'],
             'departments'  => ['view', 'create', 'edit', 'delete'],
             'designations' => ['view', 'create', 'edit', 'delete'],
             'locations'    => ['view', 'create', 'status'],

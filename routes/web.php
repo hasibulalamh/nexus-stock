@@ -23,7 +23,7 @@ Route::post('logout', [LoginController::class, 'logout'])->middleware('auth')->n
 
 
 
-Route::group(['middleware' => ['auth'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
+Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
 //logout
 
 // dashboard
@@ -52,6 +52,7 @@ Route::group(['middleware' => ['auth'], 'prefix' => 'admin', 'as' => 'admin.'], 
         Route::post('store', [UserController::class, 'store'])->middleware('can:users.create')->name('store');
         Route::get('edit/{id}', [UserController::class, 'edit'])->middleware('can:users.edit')->name('edit');
         Route::put('update/{id}', [UserController::class, 'update'])->middleware('can:users.edit')->name('update');
+        Route::patch('status/{id}', [UserController::class, 'toggleStatus'])->middleware('can:users.status')->name('status');
         Route::delete('delete/{id}', [UserController::class, 'delete'])->middleware('can:users.delete')->name('delete');
     });
 

@@ -118,6 +118,24 @@
                   </a>
                 @endcan
 
+                @can('users.status')
+                  @if($user->id !== auth()->id())
+                    <form action="{{ route('admin.users.status', $user->id) }}" method="POST"
+                          @if($user->status === 'active')
+                            data-confirm="This will sign {{ $user->full_name }} out and block their login until restored."
+                            data-confirm-title="Restrict user?"
+                          @endif>
+                      @csrf
+                      @method('PATCH')
+                      <button type="submit" class="nx-action"
+                              data-tip="{{ $user->status === 'active' ? 'Restrict' : 'Restore' }}"
+                              aria-label="{{ $user->status === 'active' ? 'Restrict' : 'Restore' }} {{ $user->full_name }}">
+                        <i class="fas {{ $user->status === 'active' ? 'fa-lock' : 'fa-lock-open' }}"></i>
+                      </button>
+                    </form>
+                  @endif
+                @endcan
+
                 @can('users.delete')
                   @if($user->id !== auth()->id())
                     <form action="{{ route('admin.users.delete', $user->id) }}" method="POST"
