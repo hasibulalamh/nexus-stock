@@ -73,6 +73,12 @@ class UserController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        // Only a superadmin may hand out the superadmin role.
+        $requestedRole = Role::find($request->role_id);
+        if ($requestedRole && $requestedRole->name === 'superadmin' && !$request->user()->hasRole('superadmin')) {
+            return redirect()->back()->withInput()->with('error', 'Only a superadmin can assign or edit a superadmin account.');
+        }
+
         // Ensure upload folder exists
         $uploadPath = public_path('uploads/user');
         if (!File::exists($uploadPath)) {
@@ -103,10 +109,9 @@ class UserController extends Controller
             'status' => $request->status,
         ]);
 
-        // Assign role safely
-        $role = Role::find($request->role_id);
-        if ($role && !$user->hasRole($role->name)) {
-            $user->assignRole($role->name);
+        // Assign role safely (the guard above already vetted the assignment)
+        if ($requestedRole && !$user->hasRole($requestedRole->name)) {
+            $user->assignRole($requestedRole->name);
         }
 
         return redirect()
@@ -148,6 +153,14 @@ class UserController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        // A non-superadmin may neither edit a superadmin nor promote anyone to one.
+        $requestedRole = Role::find($request->role_id);
+        $editingSuperadmin = $user->hasRole('superadmin');
+        $assigningSuperadmin = $requestedRole && $requestedRole->name === 'superadmin';
+        if (($editingSuperadmin || $assigningSuperadmin) && !$request->user()->hasRole('superadmin')) {
+            return redirect()->back()->withInput()->with('error', 'Only a superadmin can assign or edit a superadmin account.');
+        }
+
         // Employee ID is generated on create and stays fixed afterwards.
         $attributes = [
             'full_name' => $request->full_name,
@@ -167,7 +180,9 @@ class UserController extends Controller
             $attributes['password'] = $request->password;
         }
 
-        // Handle a replacement profile photo
+        // Handle a replacement profile photo (keep the old file name around so
+        // the replaced file can be removed after a successful update).
+        $oldPhoto = null;
         if ($request->hasFile('profile_photo')) {
             $uploadPath = public_path('uploads/user');
             if (!File::exists($uploadPath)) {
@@ -178,15 +193,25 @@ class UserController extends Controller
             $filename = time() . '.' . $profile_photo->getClientOriginalExtension();
             $profile_photo->move($uploadPath, $filename);
 
+            $oldPhoto = $user->profile_photo;
             $attributes['profile_photo'] = $filename;
         }
 
         $user->update($attributes);
 
-        // A user holds a single role, so replace the old one when it changed.
-        $role = Role::find($request->role_id);
-        if ($role && !$user->hasRole($role->name)) {
-            $user->syncRoles([$role->name]);
+        // Remove the replaced photo only when it was a real, different file —
+        // never the default avatar shipped with the app.
+        if ($oldPhoto && $oldPhoto !== 'default.png' && $oldPhoto !== $user->profile_photo) {
+            $oldPath = public_path('uploads/user/' . $oldPhoto);
+            if (File::exists($oldPath)) {
+                File::delete($oldPath);
+            }
+        }
+
+        // A user holds a single role: keep users.role_id and the Spatie role in
+        // sync by always mirroring the submitted role (also prunes stale roles).
+        if ($requestedRole) {
+            $user->syncRoles([$requestedRole->name]);
         }
 
         return redirect()
