@@ -1,101 +1,75 @@
 @extends('layout.master')
 
 @section('content')
+<div class="container-fluid p-0">
 
-<style>
-  .permission-card {
-    border: 0;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .permission-card .card-header {
-    background: linear-gradient(135deg, #20c997, #6f42c1);
-    color: #fff;
-    padding: 1rem 1.25rem;
-  }
-  .table thead th {
-    font-weight: 600;
-    letter-spacing: .3px;
-    text-transform: uppercase;
-    font-size: .8rem;
-    background: #f8f9fa;
-    border-bottom: 0;
-  }
-  .action-btns .btn {
-    border-radius: 999px;
-  }
-  .table-hover tbody tr:hover {
-    background: #fbfbff;
-  }
-  .status-dot {
-    width: .5rem; height: .5rem; display: inline-block; border-radius: 50%;
-    margin-right: .4rem;
-  }
-  .dot-active { background: #28a745; }
-  .dot-inactive { background: #6c757d; }
-</style>
-
-<div class="container my-4">
-  <div class="card permission-card">
-    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <h5 class="mb-0"><i class="fa-solid fa-lock me-2"></i>Permission Management</h5>
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Administration</small>Permissions</h1>
+      <p class="nx-sub">Read-only list — permissions are created by PermissionSeeder</p>
     </div>
+  </div>
 
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table align-middle table-hover mb-0">
-          <thead>
+  <div class="card" data-loading-target>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle nx-table">
+        <thead>
+          <tr>
+            <th scope="col" class="d-none d-md-table-cell">ID</th>
+            <th scope="col">Permission</th>
+            <th scope="col" class="d-none d-md-table-cell">Guard</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($permissions as $permission)
             <tr>
-              <th style="width: 80px;">ID</th>
-              <th>Permission Name</th>
-              <th style="width: 180px;">Guard Name</th>
-              <th style="width: 160px;">Status</th>
-              <th style="width: 160px;" class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @foreach ($permissions as $permission)
-            <tr>
-              <td>{{$permission->id}}</td>
-              <td>{{$permission->name}}</td>
-              <td>{{$permission->guard_name}}</td>
+              <td class="text-muted d-none d-md-table-cell">{{ $permission->id }}</td>
+
+              <td><div class="nx-user-name">{{ $permission->name }}</div></td>
+
+              <td class="d-none d-md-table-cell"><span class="nx-code">{{ $permission->guard_name }}</span></td>
+
               <td>
-                @if ($permission->status == 'active')
-                <span class="status-dot dot-active"></span>
-                <span class="badge text-bg-success">Active</span>
-                @elseif ($permission->status == 'inactive')
-                <span class="status-dot dot-inactive"></span>
-                <span class="badge text-bg-danger">Inactive</span>
+                @if($permission->status == 'active')
+                  <span class="badge bg-success">Active</span>
+                @elseif($permission->status == 'inactive')
+                  <span class="badge bg-danger">Inactive</span>
                 @endif
               </td>
+
               <td class="text-end">
-                <div class="d-flex gap-2 justify-content-end">
-                  <a href="{{ route('admin.permissions.edit', $permission->id) }}" class="btn btn-outline-primary btn-sm rounded-circle" data-bs-toggle="tooltip" data-bs-title="Edit" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-regular fa-pen-to-square"></i>
-                  </a>
+                <div class="d-inline-flex gap-1">
+                  @can('permissions.edit')
+                    <a href="{{ route('admin.permissions.edit', $permission->id) }}" class="nx-action"
+                       data-tip="Edit" aria-label="Edit {{ $permission->name }}">
+                      <i class="fas fa-pen"></i>
+                    </a>
+                  @endcan
                 </div>
               </td>
             </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
+          @empty
+            <tr>
+              <td colspan="5" class="nx-empty">
+                <i class="fas fa-key"></i>
+                <div class="nx-empty-title">No permissions found</div>
+                <div class="nx-empty-sub">Run the PermissionSeeder to create the permission set.</div>
+              </td>
+            </tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
 
-      <!-- Footer -->
-           <!-- Footer -->
-      <div class="p-3 d-flex justify-content-between align-items-center">
-        <small class="text-muted">Showing <strong>{{ $permissions->total() }}</strong> permissions</small>
-    <nav>{{ $permissions->links() }}</nav>
-      </div>
+    <div class="nx-footer-bar">
+      <small class="text-muted">
+        Showing <strong>{{ $permissions->firstItem() ?? 0 }}-{{ $permissions->lastItem() ?? 0 }}</strong>
+        of <strong>{{ $permissions->total() }}</strong> permissions
+      </small>
+      @if($permissions->hasPages()) {{ $permissions->links() }} @endif
     </div>
   </div>
 </div>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Enable tooltips
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
-</script>
 @endsection
