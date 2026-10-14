@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Branch;
 use App\Models\Department;
 use App\Models\Designation;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -48,8 +50,11 @@ class UserController extends Controller
         $roles = Role::all();
         $departments = Department::all();
         $designations = Designation::all();
+        // The picker only offers what the editing user may access themselves.
+        $branches = Branch::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
+        $warehouses = Warehouse::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
 
-        return view('admin.user.create', compact('roles', 'departments', 'designations'));
+        return view('admin.user.create', compact('roles', 'departments', 'designations', 'branches', 'warehouses'));
     }
 
     // Store new user
@@ -68,6 +73,11 @@ class UserController extends Controller
             'join_date' => 'required|date',
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10240',
             'status' => 'required|in:active,inactive',
+            'access_all' => 'nullable|boolean',
+            'branch_ids' => 'nullable|array',
+            'branch_ids.*' => 'exists:branches,id',
+            'warehouse_ids' => 'nullable|array',
+            'warehouse_ids.*' => 'exists:warehouses,id',
         ]);
 
         if ($validator->fails()) {
@@ -108,7 +118,15 @@ class UserController extends Controller
             'join_date' => $request->join_date,
             'profile_photo' => $filename,
             'status' => $request->status,
+            'access_all' => $request->boolean('access_all'),
         ]);
+
+        // Assign branch/warehouse access (skipped while access_all is on so a
+        // previous assignment is kept for when the flag is turned off again).
+        if (!$request->boolean('access_all')) {
+            $user->branches()->sync($request->input('branch_ids', []));
+            $user->warehouses()->sync($request->input('warehouse_ids', []));
+        }
 
         // Assign role safely (the guard above already vetted the assignment)
         if ($requestedRole && !$user->hasRole($requestedRole->name)) {
@@ -127,8 +145,11 @@ class UserController extends Controller
         $roles = Role::all();
         $departments = Department::all();
         $designations = Designation::all();
+        // The picker only offers what the editing user may access themselves.
+        $branches = Branch::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
+        $warehouses = Warehouse::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
 
-        return view('admin.user.edit', compact('user', 'roles', 'departments', 'designations'));
+        return view('admin.user.edit', compact('user', 'roles', 'departments', 'designations', 'branches', 'warehouses'));
     }
 
     // Update existing user
@@ -148,6 +169,11 @@ class UserController extends Controller
             'join_date' => 'required|date',
             'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10240',
             'status' => 'required|in:active,inactive',
+            'access_all' => 'nullable|boolean',
+            'branch_ids' => 'nullable|array',
+            'branch_ids.*' => 'exists:branches,id',
+            'warehouse_ids' => 'nullable|array',
+            'warehouse_ids.*' => 'exists:warehouses,id',
         ]);
 
         if ($validator->fails()) {
@@ -198,7 +224,20 @@ class UserController extends Controller
             $attributes['profile_photo'] = $filename;
         }
 
+        // Access assignment: a user may never change their own access.
+        $editingOwnAccess = $user->id === $request->user()->id;
+        if (!$editingOwnAccess) {
+            $attributes['access_all'] = $request->boolean('access_all');
+        }
+
         $user->update($attributes);
+
+        // The pickers are hidden while access_all is on, so sync only happens
+        // when the flag is off (a previous assignment is kept for later).
+        if (!$editingOwnAccess && !$request->boolean('access_all')) {
+            $user->branches()->sync($request->input('branch_ids', []));
+            $user->warehouses()->sync($request->input('warehouse_ids', []));
+        }
 
         // Remove the replaced photo only when it was a real, different file —
         // never the default avatar shipped with the app.

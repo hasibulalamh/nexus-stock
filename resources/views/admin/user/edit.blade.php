@@ -149,6 +149,53 @@
             <small class="text-muted">Leave empty to keep the current picture.</small>
           </div>
 
+          <div class="col-12 mt-4">
+            <div class="nx-section"><i class="fas fa-shield-halved"></i> Access</div>
+            <hr>
+          </div>
+
+          @if($user->id === auth()->id())
+            <div class="col-12">
+              <small class="text-muted d-inline-flex align-items-center gap-2">
+                <i class="fas fa-circle-info"></i> You cannot change your own branch and warehouse access.
+              </small>
+            </div>
+          @else
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input nx-check-input" type="checkbox" name="access_all" value="1"
+                       id="access_all" @checked(old('access_all', $user->access_all))>
+                <label class="form-check-label" for="access_all">Access all branches and warehouses</label>
+              </div>
+            </div>
+
+            <div class="col-md-6" data-access-block>
+              <label class="form-label" for="branch_ids">Branches</label>
+              <select name="branch_ids[]" id="branch_ids" class="form-select @error('branch_ids') is-invalid @enderror"
+                      multiple size="6" aria-label="Branches">
+                @foreach($branches as $branch)
+                  <option value="{{ $branch->id }}"
+                          @selected(in_array($branch->id, old('branch_ids', $user->branches()->pluck('id')->all())))>{{ $branch->name }}</option>
+                @endforeach
+              </select>
+              @error('branch_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+              <small class="text-muted">Hold Ctrl/Cmd to select multiple. Empty means no branch access.</small>
+            </div>
+
+            <div class="col-md-6" data-access-block>
+              <label class="form-label" for="warehouse_ids">Warehouses</label>
+              <select name="warehouse_ids[]" id="warehouse_ids" class="form-select @error('warehouse_ids') is-invalid @enderror"
+                      multiple size="6" aria-label="Warehouses">
+                @foreach($warehouses as $warehouse)
+                  <option value="{{ $warehouse->id }}"
+                          @selected(in_array($warehouse->id, old('warehouse_ids', $user->warehouses()->pluck('id')->all())))>{{ $warehouse->name }}</option>
+                @endforeach
+              </select>
+              @error('warehouse_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+              <small class="text-muted">Hold Ctrl/Cmd to select multiple. Empty means no warehouse access.</small>
+            </div>
+          @endif
+
         </div>
 
         <div class="nx-form-actions">
@@ -163,4 +210,26 @@
     </div>
   </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Access section: hide and disable the pickers while "access all" is checked.
+  const accessAll = document.getElementById('access_all');
+  if (!accessAll) return;
+
+  const blocks = document.querySelectorAll('[data-access-block]');
+
+  function toggleAccess() {
+    blocks.forEach(function (block) {
+      block.classList.toggle('d-none', accessAll.checked);
+      block.querySelectorAll('select').forEach(function (el) { el.disabled = accessAll.checked; });
+    });
+  }
+
+  accessAll.addEventListener('change', toggleAccess);
+  toggleAccess();
+});
+</script>
 @endsection
