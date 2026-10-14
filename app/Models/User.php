@@ -76,7 +76,7 @@ class User extends Authenticatable
 
     public function warehouses()
     {
-        return $this->belongsToMany(Warehouse::class);
+        return $this->belongsToMany(Warehouse::class, 'warehouse_user');
     }
 
     public function branches()
