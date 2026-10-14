@@ -1,121 +1,154 @@
 @extends('layout.master')
 
 @section('content')
-<meta name="csrf-token" content="{{ csrf_token() }}">
+<div class="container-fluid p-0">
 
-<div class="container-fluid py-4">
-  <div class="card shadow border-0">
-    <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><i class="fas fa-warehouse me-2"></i>Create Warehouse</h5>
-      <a href="{{ route('admin.warehouse.list') }}" class="btn btn-light btn-sm">
-        <i class="fas fa-arrow-left me-1"></i>Back
-      </a>
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Modules</small>Create Warehouse</h1>
+      <p class="nx-sub">Add a storage facility and its address</p>
     </div>
+    <a href="{{ route('admin.warehouse.list') }}" class="btn btn-light">
+      <i class="fas fa-arrow-left"></i> Back
+    </a>
+  </div>
 
+  @if($errors->any())
+    <div class="alert alert-danger">
+      <strong><i class="fas fa-triangle-exclamation"></i> Please fix the following:</strong>
+      <ul class="mb-0 mt-1">
+        @foreach($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
+  <div class="card">
     <div class="card-body">
-      <form action="{{route('admin.warehouse.store')}}" method="POST" id="warehouseForm">
+      <form action="{{ route('admin.warehouse.store') }}" method="POST" id="warehouseForm">
         @csrf
-        <div class="row g-4">
+        <div class="row g-3">
 
-          <!-- Warehouse Info -->
-          <h6 class="fw-bold text-primary mb-2">🏢 Warehouse Information</h6>
-          <hr class="mt-0 mb-3">
-
-          <div class="col-md-4">
-            <label class="form-label required">Warehouse Name</label>
-            <input type="text" id="warehouse_name" name="name" class="form-control" placeholder="Enter warehouse name" required>
+          <div class="col-12">
+            <div class="nx-section"><i class="fas fa-warehouse"></i> Warehouse Information</div>
+            <hr>
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">Warehouse Code</label>
-            <input type="text" id="warehouse_code" name="code" class="form-control" readonly required>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="warehouse_name">Warehouse Name</label>
+            <input type="text" id="warehouse_name" name="name" value="{{ old('name') }}"
+                   class="form-control @error('name') is-invalid @enderror"
+                   placeholder="Enter warehouse name" required>
+            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label">Slug</label>
-            <input type="text" id="warehouse_slug" name="slug" class="form-control" readonly>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="warehouse_code">Warehouse Code</label>
+            <input type="text" id="warehouse_code" name="code" value="{{ old('code') }}"
+                   class="form-control @error('code') is-invalid @enderror" readonly required>
+            @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <!-- Location Section -->
-          <h6 class="fw-bold text-primary mt-4 mb-2">📍 Location Details</h6>
-          <hr class="mt-0 mb-3">
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="warehouse_slug">Slug</label>
+            <input type="text" id="warehouse_slug" name="slug" value="{{ old('slug') }}"
+                   class="form-control @error('slug') is-invalid @enderror" readonly>
+            @error('slug')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">Country</label>
-            <select id="country" name="country_id" class="form-select" required>
+          <div class="col-12">
+            <div class="nx-section"><i class="fas fa-location-dot"></i> Location Details</div>
+            <hr>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="country">Country</label>
+            <select id="country" name="country_id" class="form-select @error('country_id') is-invalid @enderror" required>
               <option value="">-- Select Country --</option>
               @foreach($countries as $country)
-                <option value="{{ $country->id }}">{{ $country->name }}</option>
+                <option value="{{ $country->id }}" @selected(old('country_id') == $country->id)>{{ $country->name }}</option>
               @endforeach
             </select>
+            @error('country_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">State</label>
-            <select id="state" name="state_id" class="form-select" required></select>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="state">State</label>
+            <select id="state" name="state_id" class="form-select @error('state_id') is-invalid @enderror" required></select>
+            @error('state_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">City</label>
-            <select id="city" name="city_id" class="form-select" required></select>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="city">City</label>
+            <select id="city" name="city_id" class="form-select @error('city_id') is-invalid @enderror" required></select>
+            @error('city_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">Thana</label>
-            <select id="thana" name="thana_id" class="form-select" required></select>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="thana">Thana</label>
+            <select id="thana" name="thana_id" class="form-select @error('thana_id') is-invalid @enderror" required></select>
+            @error('thana_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">Union</label>
-            <select id="union" name="union_id" class="form-select" required></select>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="union">Union</label>
+            <select id="union" name="union_id" class="form-select @error('union_id') is-invalid @enderror" required></select>
+            @error('union_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label">Zipcode</label>
-            <input type="text" id="zipcode" name="zipcode" class="form-control" readonly>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="zipcode">Zipcode</label>
+            <input type="text" id="zipcode" name="zipcode" value="{{ old('zipcode') }}" class="form-control" readonly>
           </div>
 
-          <!-- Capacity & Dates -->
-          <h6 class="fw-bold text-primary mt-4 mb-2">⚙️ Operational Details</h6>
-          <hr class="mt-0 mb-3">
-
-          <div class="col-md-4">
-            <label class="form-label required">Capacity</label>
-            <input type="number" name="capacity" class="form-control" placeholder="Enter capacity" required>
+          <div class="col-12">
+            <div class="nx-section"><i class="fas fa-sliders"></i> Operational Details</div>
+            <hr>
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">Opening Date</label>
-            <input type="date" name="starting_date" class="form-control" required>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="capacity">Capacity</label>
+            <input type="number" id="capacity" name="capacity" value="{{ old('capacity') }}"
+                   class="form-control @error('capacity') is-invalid @enderror"
+                   placeholder="Enter capacity" required>
+            @error('capacity')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label required">Status</label>
-            <select name="status" class="form-select" required>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="starting_date">Opening Date</label>
+            <input type="date" id="starting_date" name="starting_date" value="{{ old('starting_date') }}"
+                   class="form-control @error('starting_date') is-invalid @enderror" required>
+            @error('starting_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label required" for="status">Status</label>
+            <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
+              <option value="active" @selected(old('status', 'active') === 'active')>Active</option>
+              <option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
             </select>
+            @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
         </div>
 
-        <!-- Action Buttons -->
-        <div class="d-flex justify-content-end mt-4">
-          <button type="reset" class="btn btn-outline-secondary me-2">
-            <i class="fas fa-undo"></i> Reset
+        <div class="nx-form-actions">
+          <button type="reset" class="btn btn-outline-secondary">
+            <i class="fas fa-rotate-left"></i> Reset
           </button>
-          <button type="submit" class="btn btn-success">
-            <i class="fas fa-save me-1"></i> Save Warehouse
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-floppy-disk"></i> Save Warehouse
           </button>
         </div>
       </form>
     </div>
   </div>
 </div>
+@endsection
 
-<!-- JS -->
+@section('scripts')
 <script src="{{ asset('assets/js/location.js') }}"></script>
-<!-- location-->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -140,15 +173,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 </script>
-
-<style>
-  .required::after {
-    content: " *";
-    color: red;
-    font-weight: bold;
-  }
-  .bg-gradient-primary {
-    background: linear-gradient(135deg, #20c997, #6f42c1);
-  }
-</style>
 @endsection
