@@ -43,6 +43,6 @@ class Brand extends Model
             return asset('uploads/brand/' . $this->logo);
         }
 
-        return asset('assets/img/brand-placeholder.png');
+        return asset('assets/img/brand-placeholder.svg');
     }
 }

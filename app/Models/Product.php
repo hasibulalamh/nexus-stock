@@ -58,7 +58,7 @@ class Product extends Model
             return asset('uploads/product/' . $this->image);
         }
 
-        return asset('assets/img/product-placeholder.png');
+        return asset('assets/img/product-placeholder.svg');
     }
 
     /**
