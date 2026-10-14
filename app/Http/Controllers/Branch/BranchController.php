@@ -20,7 +20,7 @@ class BranchController extends Controller
     //List
     public function list()
     {
-        $branches = Branch::with('location.country',
+        $branches = Branch::accessibleTo(auth()->user())->with('location.country',
         'location.state',
         'location.city',
         'location.thana',
@@ -93,14 +93,14 @@ class BranchController extends Controller
 
     //edit
     public function edit($id){
-        $branch = Branch::find($id);
+        $branch = Branch::accessibleTo(auth()->user())->findOrFail($id);
         $countries = Country::all();
         return view('admin.branch.edit', compact('branch', 'countries'));
     }
 
     //update
     public function update(Request $request, $id){
-        $branch = Branch::find($id);
+        $branch = Branch::accessibleTo(auth()->user())->findOrFail($id);
         $validation = Validator::make($request->all(), [
             'name' => 'required|max:255',
             'code' => 'required|max:255',
@@ -155,7 +155,7 @@ class BranchController extends Controller
 
     //delete
     public function delete($id){
-        $branch = Branch::find($id);
+        $branch = Branch::accessibleTo(auth()->user())->findOrFail($id);
         $branch->delete();
         return redirect()->route('admin.branch.list')->with('success', 'Branch deleted successfully');
     }

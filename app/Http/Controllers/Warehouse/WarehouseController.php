@@ -17,7 +17,7 @@ class WarehouseController extends Controller
 {
     //list
     public function list() {
-        $warehouses = Warehouse::with('location.country',
+        $warehouses = Warehouse::accessibleTo(auth()->user())->with('location.country',
             'location.state',
             'location.city',
             'location.thana',
@@ -89,7 +89,7 @@ if ($location) {
 
     //edit
     public function edit($id){
-        $warehouse = Warehouse::find($id);
+        $warehouse = Warehouse::accessibleTo(auth()->user())->findOrFail($id);
         $countries = Country::all();
         return view('warehouse.edit', compact('warehouse', 'countries'));
     }
@@ -137,9 +137,8 @@ if ($location) {
    }
 
 
-     //queary
-     $warehouse = Warehouse::find($id);
-     $warehouse->update([
+     //queary          $warehouse = Warehouse::accessibleTo(auth()->user())->findOrFail($id);
+          $warehouse->update([
        'name' => $request->name,
        'code' => $request->code,
        'slug' => $request->slug,
@@ -153,7 +152,7 @@ if ($location) {
 
     //delete
     public function delete($id){
-        $warehouse = Warehouse::find($id);
+        $warehouse = Warehouse::accessibleTo(auth()->user())->findOrFail($id);
         $warehouse->delete();
         return redirect()->route('admin.warehouse.list')->with('success','Warehouse deleted');
     }

@@ -36,6 +36,7 @@ class User extends Authenticatable
        'join_date',
        'profile_photo',
        'status',
+       'access_all',
     ];
 
     /**
@@ -76,6 +77,47 @@ class User extends Authenticatable
     public function warehouses()
     {
         return $this->belongsToMany(Warehouse::class);
+    }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class);
+    }
+
+    /**
+     * Branch/warehouse access rule:
+     * - A superadmin, or any user with access_all = true, sees everything
+     *   (these helpers then return null = unrestricted).
+     * - Otherwise the assigned ids are returned (an empty array = no access).
+     * - Warehouses do NOT belong to branches (there is no branch_id column on
+     *   warehouses), so branch assignments never imply warehouse access;
+     *   warehouses must be assigned directly.
+     *
+     * @return array<int>|null null means "all access"
+     */
+    public function hasAccessAll(): bool
+    {
+        return $this->hasRole('superadmin') || (bool) $this->access_all;
+    }
+
+    /** @return array<int>|null null means "all access" */
+    public function accessibleBranchIds(): ?array
+    {
+        if ($this->hasAccessAll()) {
+            return null;
+        }
+
+        return $this->branches()->pluck('branches.id')->all();
+    }
+
+    /** @return array<int>|null null means "all access" */
+    public function accessibleWarehouseIds(): ?array
+    {
+        if ($this->hasAccessAll()) {
+            return null;
+        }
+
+        return $this->warehouses()->pluck('warehouses.id')->all();
     }
 
     public function role(){
