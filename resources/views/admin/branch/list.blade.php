@@ -1,130 +1,117 @@
 @extends('layout.master')
 
 @section('content')
+<div class="container-fluid p-0">
 
-<style>
-  .list-card {
-    border: 0;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .list-card .card-header {
-    background: linear-gradient(135deg, #6f42c1, #20c997);
-    color: #fff;
-    padding: 1rem 1.25rem;
-  }
-  .table thead th {
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: .8rem;
-    background: #f8f9fa;
-    border-bottom: 0;
-  }
-  .table-hover tbody tr:hover {
-    background: #fbfbff;
-  }
-  .status-dot {
-    width: .6rem; height: .6rem; border-radius: 50%;
-    display: inline-block; margin-right: .4rem;
-  }
-  .dot-active { background: #28a745; }
-  .dot-inactive { background: #6c757d; }
-  .action-btns .btn {
-    border-radius: 50%;
-  }
-</style>
-
-<div class="container my-4">
-  <div class="card list-card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><i class="fa-solid fa-shop me-2"></i>Branch List</h5>
-      <a href="{{ route('admin.branch.create') }}" class="btn btn-light btn-sm">
-        <i class="fa-solid fa-plus me-1"></i>Create Branch
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Modules</small>Branches</h1>
+      <p class="nx-sub">Manage branch offices and their addresses</p>
+    </div>
+    @can('branches.create')
+      <a href="{{ route('admin.branch.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add branch
       </a>
+    @endcan
+  </div>
+
+  <div class="card" data-loading-target>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle nx-table">
+        <thead>
+          <tr>
+            <th scope="col" class="d-none d-md-table-cell">ID</th>
+            <th scope="col">Branch</th>
+            <th scope="col">Code</th>
+            <th scope="col" class="d-none d-lg-table-cell">Location</th>
+            <th scope="col" class="d-none d-md-table-cell">Capacity</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($branches as $branch)
+            <tr>
+              <td class="text-muted d-none d-md-table-cell">{{ $branch->id }}</td>
+
+              <td>
+                <div class="nx-user-name">{{ $branch->name }}</div>
+                <div class="nx-user-sub d-lg-none">
+                  {{ $branch->location->city->name ?? '-' }}, {{ $branch->location->country->name ?? '-' }}
+                </div>
+              </td>
+
+              <td><span class="nx-code">{{ $branch->code }}</span></td>
+
+              <td class="d-none d-lg-table-cell">
+                <span class="nx-user-sub">
+                  {{ $branch->location->country->name ?? '-' }},
+                  {{ $branch->location->state->name ?? '-' }},
+                  {{ $branch->location->city->name ?? '-' }},
+                  {{ $branch->location->thana->name ?? '-' }},
+                  {{ $branch->location->union->name ?? '-' }}
+                </span>
+              </td>
+
+              <td class="d-none d-md-table-cell">{{ $branch->capacity ?? '-' }}</td>
+
+              <td>
+                @if($branch->status == 'active')
+                  <span class="badge bg-success">Active</span>
+                @else
+                  <span class="badge bg-danger">Inactive</span>
+                @endif
+              </td>
+
+              <td class="text-end">
+                <div class="d-inline-flex gap-1">
+                  @can('branches.edit')
+                    <a href="{{ route('admin.branch.edit', $branch->id) }}" class="nx-action"
+                       data-tip="Edit" aria-label="Edit {{ $branch->name }}">
+                      <i class="fas fa-pen"></i>
+                    </a>
+                  @endcan
+
+                  @can('branches.delete')
+                    <form action="{{ route('admin.branch.delete', $branch->id) }}" method="POST"
+                          data-confirm="This will permanently delete {{ $branch->name }}. This cannot be undone."
+                          data-confirm-title="Delete branch?">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="nx-action danger" data-tip="Delete"
+                              aria-label="Delete {{ $branch->name }}">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  @endcan
+                </div>
+              </td>
+            </tr>
+          @empty
+            <tr>
+              <td colspan="7" class="nx-empty">
+                <i class="fas fa-store"></i>
+                <div class="nx-empty-title">No branches found</div>
+                <div class="nx-empty-sub">Add your first branch to get started.</div>
+                @can('branches.create')
+                  <a href="{{ route('admin.branch.create') }}" class="btn btn-light btn-sm mt-3">
+                    <i class="fas fa-plus"></i> Add branch
+                  </a>
+                @endcan
+              </td>
+            </tr>
+          @endforelse
+        </tbody>
+      </table>
     </div>
 
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table align-middle table-hover mb-0">
-          <thead>
-            <tr>
-              <th>#ID</th>
-              <th>Branch Name</th>
-              <th>Code</th>
-              <th>Location</th>
-              <th>Capacity</th>
-              <th>Status</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($branches as $branch)
-              <tr>
-                <td>{{ $branch->id }}</td>
-                <td>{{ $branch->name }}</td>
-                <td><span class="badge bg-dark">{{ $branch->code }}</span></td>
-                <td>
-                    <small class="text-muted">
-                       {{ $branch->location->country->name ?? '-' }},
-                       {{ $branch->location->state->name ?? '-' }},
-                       {{ $branch->location->city->name ?? '-' }},
-                       {{ $branch->location->thana->name ?? '-' }},
-                       {{ $branch->location->union->name ?? '-' }}
-                 </small>
-                </td>
-                <td>{{ $branch->capacity ?? '-' }}</td>
-                <td>
-                  @if($branch->status == 'active')
-                    <span class="status-dot dot-active"></span>
-                    <span class="badge bg-success">Active</span>
-                  @else
-                    <span class="status-dot dot-inactive"></span>
-                    <span class="badge bg-danger">Inactive</span>
-                  @endif
-                </td>
-                <td class="text-end action-btns">
-                  <a href="{{ route('admin.branch.edit', $branch->id) }}" 
-                     class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" title="Edit">
-                    <i class="fa-regular fa-pen-to-square"></i>
-                  </a>
-                  <form action=" {{ route('admin.branch.delete', $branch->id) }}" 
-                        method="POST" class="d-inline">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-outline-danger btn-sm" 
-                            onclick="return confirm('Are you sure to delete this branch?')" 
-                            data-bs-toggle="tooltip" title="Delete">
-                      <i class="fa-regular fa-trash-can"></i>
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            @empty
-              <tr>
-                <td colspan="9" class="text-center text-muted py-4">No branches found.</td>
-              </tr>
-            @endforelse
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      <div class="p-3 d-flex justify-content-between align-items-center">
-        <small class="text-muted">
-          Showing {{ $branches->firstItem() ?? 0 }} - {{ $branches->lastItem() ?? 0 }} of {{ $branches->total() }} branch   es
-        </small>
-        <div>
-          {{ $branches->links('pagination::bootstrap-5') }}
-        </div>
-      </div>
+    <div class="nx-footer-bar">
+      <small class="text-muted">
+        Showing <strong>{{ $branches->firstItem() ?? 0 }}-{{ $branches->lastItem() ?? 0 }}</strong>
+        of <strong>{{ $branches->total() }}</strong> branches
+      </small>
+      @if($branches->hasPages()) {{ $branches->links('pagination::bootstrap-5') }} @endif
     </div>
   </div>
 </div>
-
-<!-- Bootstrap tooltip -->
-<script>
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
-</script>
-
 @endsection
