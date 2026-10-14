@@ -1,68 +1,60 @@
 @extends('layout.master')
 
 @section('content')
+<div class="container-fluid p-0">
 
-<style>
-  .dept-form-card {
-    border: 0;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .dept-form-card .card-header {
-    background: linear-gradient(135deg, #20c997, #6f42c1);
-    color: #fff;
-    padding: 1rem 1.25rem;
-  }
-  .form-label {
-    font-weight: 500;
-    color: #495057;
-  }
-  .form-control, .form-select {
-    border-radius: .6rem;
-    padding: .6rem .9rem;
-  }
-  .btn-gradient {
-    background: linear-gradient(135deg, #20c997, #6f42c1);
-    border: 0;
-    color: #fff;
-    border-radius: .6rem;
-    transition: all .3s ease;
-  }
-  .btn-gradient:hover {
-    opacity: .9;
-    transform: translateY(-2px);
-  }
-</style>
-
-<div class="container my-4">
-  <div class="card dept-form-card">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <h5 class="mb-0"><i class="fa-solid fa-file-upload me-2"></i>Upload Location CSV</h5>
-      <a href="{{ route('admin.locations.list') }}" class="btn btn-light btn-sm"><i class="fa-solid fa-list me-1"></i>Location List</a>
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Administration</small>Import Locations</h1>
+      <p class="nx-sub">Upload a CSV file to add country, state, city, thana and union rows</p>
     </div>
+    <a href="{{ route('admin.locations.list') }}" class="btn btn-light">
+      <i class="fas fa-arrow-left"></i> Back
+    </a>
+  </div>
 
+  @if($errors->any())
+    <div class="alert alert-danger">
+      <strong><i class="fas fa-triangle-exclamation"></i> Please fix the following:</strong>
+      <ul class="mb-0 mt-1">
+        @foreach($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+
+  <div class="card">
     <div class="card-body">
-      <form action="{{route('admin.locations.store')}}" method="POST" enctype="multipart/form-data">
+      <form action="{{ route('admin.locations.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row g-3">
 
-          <!-- CSV File Input -->
-          <div class="col-md-6">
-            <label class="form-label">Select CSV File <span class="text-danger">*</span></label>
-            <input type="file" class="form-control" name="csv_file" accept=".csv" required>
+          <div class="col-12">
+            <div class="nx-section"><i class="fas fa-file-csv"></i> CSV File</div>
+            <hr>
           </div>
 
-          <!-- Action Buttons -->
-          <div class="col-12 d-flex justify-content-end gap-2 mt-3">
-            <button type="reset" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-left me-1"></i>Reset</button>
-            <button type="submit" class="btn btn-gradient"><i class="fa-solid fa-upload me-1"></i>Upload CSV</button>
+          <div class="col-12 col-md-6">
+            <label class="form-label required" for="csv_file">Select CSV File</label>
+            <input type="file" class="form-control @error('csv_file') is-invalid @enderror" id="csv_file"
+                   name="csv_file" accept=".csv" required>
+            <small class="text-muted">Accepted file types: .csv, .txt</small>
+            @error('csv_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
+        </div>
+
+        <div class="nx-form-actions">
+          <button type="reset" class="btn btn-outline-secondary">
+            <i class="fas fa-rotate-left"></i> Reset
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-file-upload"></i> Upload CSV
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
-
 @endsection

@@ -1,126 +1,105 @@
 @extends('layout.master')
 
 @section('content')
+<div class="container-fluid p-0">
 
-<style>
-  .list-card {
-    border: 0;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .list-card .card-header {
-    background: linear-gradient(135deg, #6f42c1, #20c997);
-    color: #fff;
-    padding: 1rem 1.25rem;
-  }
-  .table thead th {
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: .8rem;
-    background: #f8f9fa;
-    border-bottom: 0;
-  }
-  .table-hover tbody tr:hover {
-    background: #fbfbff;
-  }
-  .status-dot {
-    width: .6rem; height: .6rem; border-radius: 50%;
-    display: inline-block; margin-right: .4rem;
-  }
-  .dot-active { background: #28a745; }
-  .dot-inactive { background: #6c757d; }
-  .action-btns .btn {
-    border-radius: 50%;
-  }
-</style>
-
-<div class="container my-4">
-  <div class="card list-card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><i class="fa-solid fa-warehouse me-2"></i>Location List</h5>
-      <a href="{{ route('admin.locations.create') }}" class="btn btn-light btn-sm">
-        <i class="fa-solid fa-plus me-1"></i>Create Location
-      </a>
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Administration</small>Locations</h1>
+      <p class="nx-sub">Imported country, state, city, thana and union records</p>
     </div>
+    @can('locations.create')
+      <a href="{{ route('admin.locations.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Import locations
+      </a>
+    @endcan
+  </div>
 
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table align-middle table-hover mb-0">
-          <thead>
-            <tr>
-              <th>Country</th>
-              <th>State</th>
-              <th>City</th>
-              <th>Thana</th>
-              <th>union</th>
-              <th>Zip Code</th>
-              <th>Status</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse($locations as $location)
-              <tr id="row-{{ $location->id }}">
-                <td>{{ $location->country->name }}</td>
-                <td>{{ $location->state->name }}</td>
-                <td>{{ $location->city->name }}</td>
-                <td>{{ $location->thana->name }}</td>
-                <td>{{ $location->union->name }}</td>
-                <td>{{ $location->union->zipcode }}</td>
-                <td>
-                <button class="btn btn-sm toggle-status-btn {{ $location->status == 'active' ? 'btn-success' : 'btn-danger' }}"
-                data-id="{{ $location->id }}">
-            {{ ucfirst($location->status) }}
-        </button>
-                </td>
-                <td class="text-end action-btns">
-                  <a href="" 
-                     class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" title="Edit">
-                    <i class="fa-regular fa-pen-to-square"></i>
+  <div class="card" data-loading-target>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle nx-table">
+        <thead>
+          <tr>
+            <th scope="col" class="d-none d-lg-table-cell">Country</th>
+            <th scope="col" class="d-none d-lg-table-cell">State</th>
+            <th scope="col">City</th>
+            <th scope="col" class="d-none d-md-table-cell">Thana</th>
+            <th scope="col" class="d-none d-lg-table-cell">Union</th>
+            <th scope="col" class="d-none d-md-table-cell">Zip Code</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($locations as $location)
+            <tr id="row-{{ $location->id }}">
+              <td class="d-none d-lg-table-cell">{{ $location->country->name }}</td>
+              <td class="d-none d-lg-table-cell">{{ $location->state->name }}</td>
+              <td><div class="nx-user-name">{{ $location->city->name }}</div></td>
+              <td class="d-none d-md-table-cell">{{ $location->thana->name }}</td>
+              <td class="d-none d-lg-table-cell">{{ $location->union->name }}</td>
+              <td class="d-none d-md-table-cell"><span class="nx-code">{{ $location->union->zipcode }}</span></td>
+
+              <td>
+                <button type="button"
+                        class="nx-status-toggle toggle-status-btn {{ $location->status == 'active' ? 'btn-success' : 'btn-danger' }}"
+                        data-id="{{ $location->id }}"
+                        aria-label="Toggle status for {{ $location->city->name }}">
+                  {{ ucfirst($location->status) }}
+                </button>
+              </td>
+
+              <td class="text-end">
+                <div class="d-inline-flex gap-1">
+                  <a href="" class="nx-action" data-tip="Edit" aria-label="Edit {{ $location->city->name }}">
+                    <i class="fas fa-pen"></i>
                   </a>
-                  <form action="" 
-                        method="POST" class="d-inline">
+
+                  <form action="" method="POST"
+                        data-confirm="This will permanently delete this location. This cannot be undone."
+                        data-confirm-title="Delete location?">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-outline-danger btn-sm" 
-                            onclick="return confirm('Are you sure to delete this location?')" 
-                            data-bs-toggle="tooltip" title="Delete">
-                      <i class="fa-regular fa-trash-can"></i>
+                    <button type="submit" class="nx-action danger" data-tip="Delete"
+                            aria-label="Delete {{ $location->city->name }}">
+                      <i class="fas fa-trash"></i>
                     </button>
                   </form>
-                </td>
-              </tr>
-            @empty
-              <tr>
-                <td colspan="9" class="text-center text-muted py-4">No locations found.</td>
-              </tr>
-            @endforelse
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </td>
+            </tr>
+          @empty
+            <tr>
+              <td colspan="8" class="nx-empty">
+                <i class="fas fa-map-location-dot"></i>
+                <div class="nx-empty-title">No locations found</div>
+                <div class="nx-empty-sub">Import a CSV file to load location data.</div>
+                @can('locations.create')
+                  <a href="{{ route('admin.locations.create') }}" class="btn btn-light btn-sm mt-3">
+                    <i class="fas fa-file-upload"></i> Import locations
+                  </a>
+                @endcan
+              </td>
+            </tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
 
-      <!-- Pagination -->
-      <div class="p-3 d-flex justify-content-between align-items-center">
-        <small class="text-muted">
-          Showing {{ $locations->firstItem() ?? 0 }} - {{ $locations->lastItem() ?? 0 }} of {{ $locations->total() }} locations
-        </small>
-        <div>
-          {{ $locations->links('pagination::bootstrap-5') }}
-        </div>
-      </div>
+    <div class="nx-footer-bar">
+      <small class="text-muted">
+        Showing <strong>{{ $locations->firstItem() ?? 0 }}-{{ $locations->lastItem() ?? 0 }}</strong>
+        of <strong>{{ $locations->total() }}</strong> locations
+      </small>
+      @if($locations->hasPages()) {{ $locations->links('pagination::bootstrap-5') }} @endif
     </div>
   </div>
 </div>
+@endsection
 
-<!-- Bootstrap tooltip -->
+@section('scripts')
 <script>
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
-</script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<script>
-$(document).on('click', '.toggle-status-btn', function() {
+$(document).on('click', '.toggle-status-btn', function () {
     let button = $(this);
     let id = button.data('id');
 
@@ -131,7 +110,7 @@ $(document).on('click', '.toggle-status-btn', function() {
             _token: "{{ csrf_token() }}",
             id: id
         },
-        success: function(response) {
+        success: function (response) {
             if (response.success) {
                 if (response.status === 'active') {
                     button.removeClass('btn-danger').addClass('btn-success').text('Active');
@@ -142,12 +121,10 @@ $(document).on('click', '.toggle-status-btn', function() {
                 alert('Something went wrong!');
             }
         },
-        error: function() {
+        error: function () {
             alert('Server error!');
         }
     });
 });
 </script>
-
-
 @endsection
