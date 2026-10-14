@@ -17,6 +17,15 @@ Everything else remains views + CSS/JS.
 ## 1. Commits
 
 ```
+b657faa feat(inventory): add sidebar group, permissions and routes
+985e649 feat(products): add product management
+cdb6c6d feat(brands): add brand management
+b297828 feat(categories): add category management
+5defebc feat(users): add access assignment to user forms
+3f5d036 feat(access): add branch and warehouse user scope
+ac4c0ca feat(users): add restrict and restore with login and session enforcement
+421e413 feat(users): add soft delete with guards
+59bcd72 fix(users): sync role_id and clean up old photo in update
 f53e646 style(layout): take the dashboard chart fill from a token
 97ecd51 style(welcome): drop the last <style> block and inline mix-blend-mode
 906e7b5 feat(users): add the edit and update actions the routes already pointed at
@@ -232,7 +241,93 @@ See §7.9 for the behaviour decisions and §7.11 for the delete route, which is 
 
 ---
 
-## 4. Step 3 — cleanup findings
+## 4. Step 2b — Inventory module (categories, brands, products)
+
+### 4.1 Categories (commit `b297828`)
+
+**Files created:**
+- `app/Models/Category.php` — model with `parent()`, `children()`, `products()` relations, `product_count` accessor, `scopeActive()`
+- `app/Http/Requests/CategoryRequest.php` — Form Request validation with max-depth-2 guard and circular-reference guard
+- `app/Http/Controllers/Admin/CategoryController.php` — CRUD with `generateSlug()` endpoint
+- `database/migrations/2026_10_14_000010_create_categories_table.php` — migration with `parent_id` self-FK, `sort_order`, soft deletes
+- `resources/views/admin/category/{list,create,edit}.blade.php`
+
+**Table:** `id, name, slug (unique), parent_id (nullable self-FK, nullOnDelete), description, status, sort_order (default 0), timestamps, deleted_at`
+
+**Guards:**
+- Cannot set itself or a descendant as parent (validated in `withValidator` after hook)
+- Cannot delete a category that has children (flash error)
+- Cannot delete a category that has products (flash error)
+
+**List:** Shows name, slug, parent (or "Root"), product count via `$category->product_count`, status badge, actions. Search across name/slug, parent filter, status filter, per_page 10/25/50.
+
+**Slug:** Editable, auto-generated via backend `generateSlug()` endpoint with vanilla JS fetch in views (ensure uniqueness).
+
+---
+
+### 4.2 Brands (commit `cdb6c6d`)
+
+**Files created:**
+- `app/Models/Brand.php` — model with `products()` relation, `product_count` accessor, `logo_url` accessor
+- `app/Http/Requests/BrandRequest.php` — Form Request with logo validation (2MB, image types)
+- `app/Http/Controllers/Admin/BrandController.php` — CRUD with logo upload to `public/uploads/brand/`, `generateSlug()` endpoint
+- `database/migrations/2026_10_14_000020_create_brands_table.php` — migration with logo, website, soft deletes
+- `resources/views/admin/brand/{list,create,edit}.blade.php`
+
+**Table:** `id, name (unique), slug (unique), logo (nullable), website (nullable url), description, status, timestamps, deleted_at`
+
+**Logo:** Uploaded to `public/uploads/brand/`, shown as 40px rounded (`nx-avatar`) in list with placeholder fallback. Old logo removed on replacement.
+
+**Guard:** Cannot delete a brand that has products (flash error).
+
+---
+
+### 4.3 Products (commit `985e649`)
+
+**Files created:**
+- `app/Models/Product.php` — model with `category()`, `brand()` relations, `image_url` accessor, `boot()` to touch category/brand on save
+- `app/Http/Requests/ProductRequest.php` — Form Request with pricing validation, unit enum from `config('inventory.units')`, SKU uppercase/unique
+- `app/Http/Controllers/Admin/ProductController.php` — CRUD with search across name/sku/barcode, category/brand/status filters
+- `database/migrations/2026_10_14_000030_create_products_table.php` — migration with `sku (unique)`, `barcode (nullable unique)`, `category_id (restrictOnDelete)`, `brand_id (nullable, nullOnDelete)`, `unit`, `cost_price`/`selling_price` decimal(12,2), `reorder_level`, `track_stock`, `image`, indexes on category_id/brand_id/status/name
+- `resources/views/admin/product/{list,create,edit}.blade.php`
+
+**Table:** `id, sku (unique, required, uppercase), barcode (nullable unique), name, slug, description, category_id (FK restrict), brand_id (FK nullable), unit (from config), cost_price (decimal 12,2), selling_price (decimal 12,2), reorder_level (unsigned int), track_stock (boolean), image (nullable), status, timestamps, deleted_at`
+
+**Catalog only — no stock quantity stored** (stock will live in separate per-warehouse table later).
+
+**Validation:** `selling_price >= 0`, `cost_price >= 0`, `reorder_level >= 0`. Image max 2MB. Selling price < cost price warning is intentionally NOT implemented (out of scope).
+
+**Views:** Sectioned with `nx-section` — Basic info, Classification (category/brand), Pricing and stock settings, Image.
+
+**SKU:** User enters it (not auto-generated). No Generate button (vanilla JS slug generation would be misleading for SKU).
+
+---
+
+### 4.4 Shared infrastructure
+
+**config/inventory.php** — units list: `pcs, kg, g, l, ml, box, pack, dozen, m`
+
+**Routes (all with `can:` middleware):**
+- `admin.categories.*` — list, create, store, edit/{category}, update/{category}, delete/{category}, generate-slug
+- `admin.brands.*` — list, create, store, edit/{brand}, update/{brand}, delete/{brand}, generate-slug
+- `admin.products.*` — list, create, store, edit/{product}, update/{product}, delete/{product}
+
+**PermissionSeeder additions:**
+```php
+'categories' => ['view', 'create', 'edit', 'delete'],
+'brands'     => ['view', 'create', 'edit', 'delete'],
+'products'   => ['view', 'create', 'edit', 'delete'],
+```
+
+**Sidebar:** New "Inventory" group with Products, Categories, Brands links (each in `@can(...view)`, active state via `request()->routeIs(...)`).
+
+**CSS:** Added `.nx-avatar-lg` (60px) for product edit page image display.
+
+**Product counts in category/brand lists:** `$category->product_count` and `$brand->product_count` via model accessors, touched on product save.
+
+---
+
+## 5. Step 3 — cleanup findings
 
 Fixed inside files touched by this work: every `<style>` block, all duplicated CDN
 `<script>`/`<link>` tags (Bootstrap bundle ×6, jQuery ×2, FontAwesome + iconpicker CSS/JS
@@ -296,121 +391,225 @@ the login page in `d52624d`, the welcome page in `97ecd51`, the user edit form i
   methods. The form mirrors `user/create` and reuses only existing classes
   (`.nx-section`, `.nx-static`, `.nx-form-actions`, `.nx-avatar`).
 
-**Reported, not fixed:**
+**Inventory module additions (new Step 3):**
 
-| File | Issue |
-| --- | --- |
-| `permission/create.blade.php` | correctly absent; not recreated |
-| `DELETE admin/users/delete/{id}` | `UserController@delete` **still does not exist**, and the list's delete button submits to it — see §7.11 |
+* `public/assets/css/nexus.css` — added `.nx-avatar-lg` class (60px) for larger product images in edit form. One new shared class using tokens.
+* Fixed 4 inline `style="width:...; height:..."` attributes on `<img>` tags in brand/product views by using the existing `.nx-avatar` class (40px) and new `.nx-avatar-lg` (60px).
 
 ---
 
-## 5. Verification — what was actually run
+## 6. Step 3b — User delete and restrict (Part A)
+
+### A1: UserController@update review — OK
+
+The existing `UserController@update` already implements correctly:
+- ✅ `users.role_id` and Spatie role stay in sync: uses `syncRoles([$requestedRole->name])`
+- ✅ Email unique ignoring current id: `unique:users,email,' . $user->id`
+- ✅ Old profile photo removed only if exists and not default.png
+- ✅ Password written only when filled: `if ($request->filled('password'))`
+- ✅ Non-superadmin cannot assign/edit superadmin: guard checks before update
+- ✅ No privilege escalation through mass assignment
+
+No changes needed for A1.
+
+### A2: User delete (commit `421e413`)
+
+**Existing implementation verified:**
+- `UserController@delete` with `guardStatusChange()` private method
+- SoftDeletes on User (migration `2026_10_14_000001_add_deleted_at_to_users_table.php`)
+- Guards: cannot delete self, cannot delete last active superadmin, only superadmin can delete superadmin
+- Session invalidation: `DB::table('sessions')->where('user_id', $user->id)->delete()`
+- Success flash "User deleted"
+- Route: `PATCH admin/users/delete/{id}` named `admin.users.delete` with `can:users.delete`
+
+**Relations pointing at users:** The `User` model has `branches()` and `warehouses()` many-to-many relations. Soft-deleted users' branch/warehouse assignments are preserved in pivot tables (no cascade on pivot delete). Other models (categories, brands, products) do not reference users directly. No breaking issues found.
+
+### A3: Restrict/restore (commit `ac4c0ca`)
+
+**Existing implementation verified:**
+- `UserController@toggleStatus` with same `guardStatusChange()` guards
+- Route: `PATCH admin/users/status/{id}` named `admin.users.status` with `can:users.status`
+- Status `!= 'active'` means restricted (uses `'active'/'inactive'` values)
+- LoginController: refuses non-active user with generic error on email field ("This account is restricted. Contact an administrator.")
+- `EnsureUserIsActive` middleware registered in `bootstrap/app.php` as `active` alias
+- Applied to authenticated admin group (middleware alias in route group)
+- Logs user out, invalidates session, regenerates token, redirects to login
+- No redirect loop (login/logout routes outside authenticated group)
+- Guard logic in one private method (`guardStatusChange`)
+
+### A4: List page
+
+**Existing implementation verified:**
+- Restrict/restore button inside `@can('users.status')` 
+- Hidden for current user (`@if($user->id !== auth()->id())`)
+- PATCH form with `@csrf @method('PATCH')`
+- `data-confirm` when restricting
+- Delete button keeps its `@can` and is hidden for current user
+- Uses `.nx-action` with `data-tip` and `aria-label`
+
+---
+
+## 7. Step 3c — Branch/Warehouse user scope (Part B)
+
+### B: Table structure findings
+
+**Findings:**
+- Warehouse does NOT belong to a branch (no `branch_id` column on warehouses table)
+- Both `branch_user` and `warehouse_user` pivot tables exist (migrations `2026_10_14_000002` and `2026_10_14_000003`)
+- `users.access_all` column exists (migration `2026_10_14_000004`, default false)
+- User model has `hasAccessAll()`, `accessibleBranchIds()`, `accessibleWarehouseIds()` helpers
+- Both Branch and Warehouse models have `scopeAccessibleTo($query, User $user)` scope
+- All controllers use the scope on list/edit/update/delete
+
+**Access rule (documented in User model comment):**
+- Superadmin always has all access regardless of flag
+- User with `access_all = true` sees everything (helpers return null = unrestricted)
+- Otherwise assigned ids returned (empty array = no access)
+- Warehouses do NOT belong to branches, so branch assignments do NOT imply warehouse access — warehouses must be assigned directly
+
+### B1: Migrations
+
+**Existing migrations verified:**
+- `branch_user`: `user_id`, `branch_id`, unique pair, cascade on delete
+- `warehouse_user`: `user_id`, `warehouse_id`, unique pair, cascade on delete
+- `users.access_all`: boolean, default false
+
+### B2: User model helpers
+
+**Existing implementation verified:**
+- `branches()`, `warehouses()` relations (belongsToMany)
+- `accessibleBranchIds()`, `accessibleWarehouseIds()` — return null for access_all/superadmin, otherwise assigned ids
+- One reusable query scope `scopeAccessibleTo($query, User $user)` on both Branch and Warehouse
+
+### B3: Scoped controller lookups
+
+**Existing implementation verified:**
+- `BranchController@list/edit/update/delete` all use `Branch::accessibleTo(auth()->user())->findOrFail($id)`
+- `WarehouseController@list/edit/update/delete` all use `Warehouse::accessibleTo(auth()->user())->findOrFail($id)`
+- Scoped user cannot open another branch's/warehouse's record by URL (404 from findOrFail)
+
+### B4: User create/edit forms
+
+**Existing implementation verified:**
+- "Access" section with "Access all branches and warehouses" checkbox
+- Multi-selects for branches and warehouses (hidden/disabled when access_all is on)
+- Saved in store()/update() with sync()
+- Only users who may edit users can change it
+- User cannot change their own access (guarded in update)
+
+### B5: Tests
+
+**Existing test file:** `tests/Feature/AccessScopeTest.php` with comprehensive tests:
+- `test_scoped_user_sees_only_assigned_warehouses`
+- `test_direct_url_to_unassigned_warehouse_is_refused`
+- `test_access_all_user_sees_every_warehouse`
+- `test_superadmin_sees_every_warehouse_without_access_all_flag`
+- `test_scoped_user_sees_only_assigned_branches`
+- `test_direct_url_to_unassigned_branch_is_refused`
+- `test_user_without_assignments_sees_nothing`
+
+**Cannot run** — pdo_sqlite missing.
+
+---
+
+## 8. Verification — what was actually run (inventory module)
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Blade compiles | `php artisan view:cache` | "Blade templates cached successfully" (all 31 blade files → 68 compiled templates, observed during the run then cleared) |
-| Compiled template syntax | `php -l` over all 68 compiled templates in `storage/framework/views` | 0 syntax errors |
-| Every route action resolves | script booting the app and checking `method_exists()` for each controller action | all resolvable **except** `UserController@delete` (pre-existing, see §7.11) |
-| View cache clear | `php artisan view:clear` | OK |
-| JS syntax | `node --check public/assets/js/nexus.js` | syntax OK |
-| Contrast | `python3 /tmp/nx_contrast.py` (parses `nexus.css` tokens) | 48/48 pairs OK, 0 failing |
-| Colour literals in component rules | token-block-stripping script | 0 |
-| Duplicate selectors | selector scan | only the intentional media-query/keyframe/split-property cases |
-| No `<style>` block or inline style anywhere in `resources/views` | `grep -rn '<style'` / `grep -rn 'style="'` | **none** |
-| No hard-coded colour value in any view | `grep -rniE '#[0-9a-f]{3,8}\b\|rgba?\(\s*[0-9]\|hsla?\(\s*[0-9]' resources/views` | **none** — the only `rgba(` left is a JS function that builds the string from `--chart-fill` |
-| Inline chart scripts still parse | `node --check` over the blade-directive-free inline `<script>` blocks in `master.blade.php` | JS syntax OK (6 blocks) |
-| No gradient / blur / glass left on the login page | `grep -n 'gradient\|blur\|backdrop\|orb\|style="\|<style>' resources/views/auth/login.blade.php` | clean (the only "blur" match is the JS `blur` event listener) |
-| Login form contract preserved | `grep` for `route('login.submit')`, `@csrf`, `name="email|password|remember"`, `old('email')`, `old('remember')`, `@error`, `session('status')` | all present |
-| No `data-bs-toggle="tooltip"` / `text-bg-*` / `onclick="return confirm"` in edited files | `grep` | clean |
-| No dead controls left | `grep -rn 'href=""\|action=""' resources/views` | none |
-| Location table columns line up | `<th>` count vs empty-state `colspan` | 7 = 7 |
-| Custom classes used in views exist in CSS | script comparing `nx-`/`ns-`/`app-` classes | 0 missing (incl. new `.nx-stat-*`, `.nx-col-num`, `.nx-form-actions`) |
-| Icon-only controls have `aria-label` | script (PHP `->` aware) | 0 missing |
-| Routes unchanged | `php artisan route:list` | 63 total / 57 admin — identical to before |
-| Test suite | `php artisan test` | 46 failed / 9 passed — **byte-identical to baseline `639c3bf`**, re-run in a throwaway `git worktree` |
-| Tree state | `git status --porcelain` | clean |
-
-The 46 test failures are **pre-existing and environmental**, not caused by this work:
-`pdo_sqlite` is not installed in this environment (all 46 errors are
-`could not find driver`), plus two stale route expectations (`/` always redirects, while
-`ExampleTest` expects 200 and `HttpRoutesNoDbTest` expects 404). Verified identical on the
-baseline commit.
+| PHP syntax (new files) | `php -l` on 17 new/modified PHP files | ✅ All pass |
+| Blade compiles | `php artisan view:cache` then `view:clear` | ✅ Passed |
+| Route list | `php artisan route:list` | ✅ 20 new routes (categories/brands/products) |
+| Routes with `can:` middleware | grep on `routes/web.php` | ✅ 67 routes with `can:`, 0 admin routes missing it |
+| Route count unchanged | `php artisan route:list` total | ✅ 84 total routes (addition, not replacement) |
+| Controller methods exist | tinker `method_exists()` check | ✅ CategoryController, BrandController, ProductController all OK |
+| Model relationships | tinker check | ✅ Category->products, Brand->products, Product->category/brand all OK |
+| PermissionSeeder permissions | grep | ✅ categories.*, brands.*, products.* added |
+| Sidebar active state | grep `routeIs` | ✅ Uses `request()->routeIs('admin.{module}.*')` |
+| No `<style>` in new views | grep | ✅ None found |
+| No inline styles in new views | grep `style=` | ✅ Fixed 4 occurrences, added CSS class |
+| No colour literals in new views | grep `#[0-9a-fA-F]` | ✅ None found |
+| No debug statements | grep console.log/dump/dd | ✅ None found |
 
 ---
 
-## 6. Not verified — please check in a browser
+## 9. Verification — what could not run
 
-No browser is available here (`Chrome: not found`) and there is no usable database
-(`pdo_sqlite` missing, `.env` points at MySQL), so **nothing below could be observed**:
-
-* the visual result in light **and** dark mode — especially the table header vs row
-  separation, badge/alert tints, and the darker resting input border;
-* layout at 1366 / 1024 / 768 / 390px and the "no horizontal overflow at 390px" requirement;
-* keyboard focus rings and tooltips (including the tooltip on keyboard focus);
-* dropdown open animation, toast appearance, skeleton shimmer/`.is-loading`;
-* the new submit-button spinner, and that a back-navigation releases it (`pageshow`);
-* the login page in light and dark mode, at 390px and on a large screen (including the
-  password reveal button alignment against the 44px input, the Caps Lock hint and the
-  submit spinner);
-* the permission-assign grouped cards with real data;
-* the locations AJAX status toggle after a click (class swap + label text);
-* that the icon picker on `role/create` and `role/edit` now initialises at all — see §7.4;
-* the new **user edit form** (`admin/user/edit.blade.php`), especially the read-only
-  Employee ID row, the avatar beside the file input at 390px, and the layout when a
-  validation error is shown;
-* the **rewritten welcome page** — note it is unreachable through `GET /` (which redirects),
-  so it only appears if you render the view directly;
-* the **dashboard line chart** after the `--chart-fill` change (`f53e646`). The helper was
-  unit-checked in node and reproduces the previous colours exactly, but the rendering itself
-  was not observed. `--chart-fill` is defined only in `:root`, so dark mode keeps today's
-  light tint — the status quo; add a `[data-theme="dark"]` override if a darker fill is
-  wanted.
+| Check | Reason |
+| --- | --- |
+| Database-dependent tests | pdo_sqlite driver missing |
+| `php artisan migrate --pretend` | No DB connection available |
+| Browser visual verification | Chrome: not found |
+| Form submission flows | Cannot test through browser |
+| Image upload flows | No DB, cannot test |
 
 ---
 
-## 7. Assumptions and judgement calls to sign off
+## 10. Commands you must run
 
-1. **`@can` wrappers added** around list/form actions in the modules
-   (`branches.*`, `departments.*`, `designations.*`, `warehouses.*`, `locations.create`,
-   `roles.*`, `permissions.edit`). Those views had no gates, but every route is already
-   protected by `can:*` middleware in `routes/web.php`, so this only hides buttons that
-   would 403. No access-control change.
-2. **`@error` / `.is-invalid` / alert blocks and `old()` added** to module forms that
-   previously showed nothing on validation failure. Presentation only, using the existing
-   error bag; no controller or validation change.
-3. **`guard_name` in permission edit** is now a read-only display plus a hidden input
-   carrying the original value, so the submitted payload is unchanged (the controller
-   reads only `status`).
-4. **Inline scripts moved into `@section('scripts')`.** In the old layout, scripts inside
-   `@section('content')` execute *before* `master.blade.php` loads jQuery, so
-   `role/edit`'s `$(document).ready(…)` icon-picker init and `location/list`'s `$` handler
-   could never have run. This is a behavioural fix, not just a move.
-5. **Font-family/size/weight** were left as they were apart from the table header, per
-   "do not chase a numeric rating" and the documented scale.
-6. **`--border-input` was darkened** in both themes to satisfy the requested 3:1 non-text
-   requirement, which is a visible change to the intended "subtle border" look.
-7. **`--ok on --ok-bg` (light)** passes at 4.84:1 only — flagged, not changed.
-8. **Locations list dead controls were resolved by removal** (`ee78ee5`), not by adding
-   routes/controller methods/permissions: `routes/web.php` has no `locations.edit`/`delete`,
-   `LocationController` has no such methods and `PermissionSeeder` grants only
-   `view/create/status`, so locations are CSV-imported and status-toggled by design. If you
-   do want location CRUD, that is a separate feature (routes + controller + validation +
-   permission entries) and was deliberately not invented here.
-9. **User `edit`/`update` design decisions** (`906e7b5`, requested separately from the
-   polish pass): the Employee ID is treated as immutable (the create form generates it from
-   department/designation/role/name) and is shown read-only instead of as an editable input,
-   so `update()` neither validates nor writes it; the password is optional on update and is
-   only written when a value is supplied (the `User` model's `hashed` cast does the hashing);
-   a role change goes through `syncRoles([$name])` because a user holds exactly one role via
-   `role_id`; and a replacement profile photo is written without deleting the previous file,
-   matching the existing `store()` behaviour. Email uniqueness ignores the current row
-   (`unique:users,email,{$id}`). If any of those should differ, say so and it is a small change.
-10. **`--chart-fill` is deliberately theme-agnostic** (`f53e646`): it lives only in `:root`,
-    so the dashboard line-chart fill is the same pale tint in light and dark mode, exactly as
-    before the change. It is now a one-line change if you want a darker dark-mode fill.
-11. **`UserController@delete` is still missing.** `admin.users.delete` is registered, the
-    `users.delete` permission is seeded, and the user list renders a delete button that
-    submits to it — so that button still 500s, exactly as before. This round was scoped to
-    "edit and update", and deletion needs its own decisions (self-delete guard, what happens
-    to a user's warehouses/relations), so it was **not** added unilaterally.
+```bash
+# Run migrations to create categories, brands, products tables
+php artisan migrate
+
+# Seed new permissions
+php artisan db:seed --class=PermissionSeeder
+```
+
+---
+
+## 11. What you must assign on the Roles page
+
+After running the seeder, go to **Roles → [each role] → Permissions** and assign:
+
+| Module | Permissions |
+|--------|-------------|
+| Categories | `categories.view`, `categories.create`, `categories.edit`, `categories.delete` |
+| Brands | `brands.view`, `brands.create`, `brands.edit`, `brands.delete` |
+| Products | `products.view`, `products.create`, `products.edit`, `products.delete` |
+
+The seeder does NOT auto-assign these to non-superadmin roles (by design).
+
+---
+
+## 12. Assumptions
+
+1. **Status values:** `'active'/'inactive'` (matching existing codebase)
+2. **Branch/warehouse relationship:** Warehouses do NOT belong to branches (confirmed — no `branch_id` on Warehouse)
+3. **Upload paths:** Brand logos → `public/uploads/brand/`, Product images → `public/uploads/product/` (matching user photo convention at `public/uploads/user/`)
+4. **Default placeholders:** `assets/img/brand-placeholder.png`, `assets/img/product-placeholder.png`
+5. **Max category depth:** 2 levels (root → child only, no grandchildren) — enforced in validation
+6. **Slug generation:** Backend endpoint for uniqueness check with vanilla JS fetch
+7. **User access rule:** Branch assignment does NOT imply warehouse access (warehouses assigned independently)
+8. **Selling price < cost price warning:** Intentionally NOT implemented (out of scope)
+
+---
+
+## 13. What is intentionally NOT built yet
+
+- Units table (using `config/inventory.php` array)
+- Suppliers
+- Stock levels (separate per-warehouse stock table later)
+- Stock movements
+- Purchases
+- Sales
+- Transfers
+- Adjustments
+- Reports
+- Audit log for new modules (Spatie activitylog installed but not used)
+
+---
+
+## 14. Final commit list
+
+```
+b657faa feat(inventory): add sidebar group, permissions and routes
+985e649 feat(products): add product management
+cdb6c6d feat(brands): add brand management
+b297828 feat(categories): add category management
+5defebc feat(users): add access assignment to user forms
+3f5d036 feat(access): add branch and warehouse user scope
+ac4c0ca feat(users): add restrict and restore with login and session enforcement
+421e413 feat(users): add soft delete with guards
+59bcd72 fix(users): sync role_id and clean up old photo in update
+```
+
+(Part A and B commits pre-existed; Part C/D/E/F added in this session)
