@@ -215,6 +215,12 @@ textarea.form-control { height: auto; padding: var(--s3); }
 [data-theme="dark"] .form-select option { background: var(--field-option-bg); color: var(--text); }
 .required::after { content: " *"; color: var(--danger); font-weight: 600; }
 .is-invalid { border-color: var(--danger) !important; }
+.form-control.is-invalid:focus, .form-select.is-invalid:focus { border-color: var(--danger); box-shadow: 0 0 0 3px var(--danger-bg); }
+.invalid-feedback { color: var(--danger); font-size: .8125rem; }
+/* theme the Bootstrap text utilities instead of its own default red */
+.text-danger  { color: var(--danger) !important; }
+.text-success { color: var(--ok) !important; }
+.text-primary { color: var(--primary) !important; }
 .nx-section { display: flex; align-items: center; gap: var(--s3); margin: var(--s2) 0 0; font-weight: 600; font-size: 1rem; color: var(--text); }
 .nx-section i { width: 32px; height: 32px; border-radius: var(--radius-sm); display: grid; place-items: center; font-size: .8125rem; color: var(--primary); background: var(--primary-soft); }
 .nx-section + hr { border-top: 1px solid var(--border); opacity: 1; margin: var(--s3) 0 var(--s4); }
@@ -369,6 +375,8 @@ textarea.form-control { height: auto; padding: var(--s3); }
 
 /* ---------- 11b. shared page patterns ---------- */
 .nx-empty { padding: var(--s6) var(--s4); text-align: center; }
+/* an empty-state <td> would otherwise lose to the generic table cell padding */
+.table td.nx-empty { padding: var(--s6) var(--s4); }
 .nx-empty > i { display: block; margin-bottom: var(--s2); font-size: 1.5rem; color: var(--text-2); }
 .nx-empty-title { font-weight: 600; color: var(--text); }
 .nx-empty-sub { margin-top: var(--s1); font-size: .8125rem; color: var(--text-2); }
