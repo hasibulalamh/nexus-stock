@@ -16,6 +16,7 @@
   </div>
 
   <div class="card" data-loading-target>
+    {{-- locations are imported from CSV and toggled by status; there is no edit/delete route or permission --}}
     <div class="table-responsive">
       <table class="table table-hover align-middle nx-table">
         <thead>
@@ -27,7 +28,6 @@
             <th scope="col" class="d-none d-lg-table-cell">Union</th>
             <th scope="col" class="d-none d-md-table-cell">Zip Code</th>
             <th scope="col">Status</th>
-            <th scope="col" class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -48,29 +48,10 @@
                   {{ ucfirst($location->status) }}
                 </button>
               </td>
-
-              <td class="text-end">
-                <div class="d-inline-flex gap-1">
-                  <a href="" class="nx-action" data-tip="Edit" aria-label="Edit {{ $location->city->name }}">
-                    <i class="fas fa-pen"></i>
-                  </a>
-
-                  <form action="" method="POST"
-                        data-confirm="This will permanently delete this location. This cannot be undone."
-                        data-confirm-title="Delete location?">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="nx-action danger" data-tip="Delete"
-                            aria-label="Delete {{ $location->city->name }}">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </form>
-                </div>
-              </td>
             </tr>
           @empty
             <tr>
-              <td colspan="8" class="nx-empty">
+              <td colspan="7" class="nx-empty">
                 <i class="fas fa-map-location-dot"></i>
                 <div class="nx-empty-title">No locations found</div>
                 <div class="nx-empty-sub">Import a CSV file to load location data.</div>
