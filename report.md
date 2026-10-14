@@ -258,8 +258,8 @@ below got their own commits — the first two in `dbbcd9c`, the third in `ee78ee
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Blade compiles | `php artisan view:cache` | "Blade templates cached successfully" (all 23 views → 67 compiled files) |
-| Compiled template syntax | `php -l` over all 67 files in `storage/framework/views` | 0 syntax errors |
+| Blade compiles | `php artisan view:cache` | "Blade templates cached successfully" (all 30 blade files → 67 compiled templates, observed during the run then cleared) |
+| Compiled template syntax | `php -l` over all 67 compiled templates in `storage/framework/views` | 0 syntax errors |
 | View cache clear | `php artisan view:clear` | OK |
 | JS syntax | `node --check public/assets/js/nexus.js` | syntax OK |
 | Contrast | `python3 /tmp/nx_contrast.py` (parses `nexus.css` tokens) | 46/46 pairs OK, 0 failing |
