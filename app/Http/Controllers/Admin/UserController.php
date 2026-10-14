@@ -15,10 +15,30 @@ use Spatie\Permission\Models\Role;
 class UserController extends Controller
 {
     // User list
-    public function list()
+    public function list(Request $request)
     {
-        $users = User::with(['department', 'designation', 'roles'])->paginate(10);
-        return view('admin.user.list', compact('users'));
+        $perPage = in_array((int) $request->per_page, [10, 25, 50]) ? (int) $request->per_page : 10;
+
+        $users = User::with(['department', 'designation', 'roles'])
+            ->when($request->filled('q'), function ($query) use ($request) {
+                $term = '%' . trim($request->q) . '%';
+                $query->where(function ($w) use ($term) {
+                    $w->where('full_name', 'like', $term)
+                        ->orWhere('email', 'like', $term)
+                        ->orWhere('employee_id', 'like', $term);
+                });
+            })
+            ->when($request->filled('department_id'), fn($q) => $q->where('department_id', $request->department_id))
+            ->when($request->filled('designation_id'), fn($q) => $q->where('designation_id', $request->designation_id))
+            ->when(in_array($request->status, ['active', 'inactive']), fn($q) => $q->where('status', $request->status))
+            ->orderBy('id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $departments  = Department::orderBy('name')->get(['id', 'name']);
+        $designations = Designation::orderBy('name')->get(['id', 'name']);
+
+        return view('admin.user.list', compact('users', 'departments', 'designations'));
     }
 
     // Create form
