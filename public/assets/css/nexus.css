@@ -374,6 +374,8 @@ textarea.form-control { height: auto; padding: var(--s3); }
 .nx-empty-sub { margin-top: var(--s1); font-size: .8125rem; color: var(--text-2); }
 
 .nx-code { display: inline-block; padding: 2px var(--s2); border-radius: var(--radius-xs); background: var(--surface-2); color: var(--text-2); font-size: .75rem; font-weight: 600; letter-spacing: .02em; }
+/* read-only value that is not an input (e.g. the auto-generated code preview) */
+.nx-static { display: flex; align-items: center; min-height: 44px; padding: 0 var(--s3); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-2); font-size: .875rem; font-weight: 500; letter-spacing: .02em; }
 .nx-ico-chip { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary); font-size: .8125rem; }
 
 /* inline status control (e.g. the locations list) */
