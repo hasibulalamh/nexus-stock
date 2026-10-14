@@ -1,134 +1,119 @@
 @extends('layout.master')
 
 @section('content')
+<div class="container-fluid p-0">
 
-
-
-
-
-<style>
-  .role-card {
-    border: 0;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .role-card .card-header {
-    background: linear-gradient(135deg, #6f42c1, #20c997);
-    color: #fff;
-    padding: 1rem 1.25rem;
-  }
-  .table thead th {
-    font-weight: 600;
-    letter-spacing: .3px;
-    text-transform: uppercase;
-    font-size: .8rem;
-    background: #f8f9fa;
-    border-bottom: 0;
-  }
-  .status-dot {
-    width: .5rem; height: .5rem; display: inline-block; border-radius: 50%;
-    margin-right: .4rem;
-  }
-  .dot-active { background: #28a745; }
-  .dot-inactive { background: #6c757d; }
-  .action-btns .btn {
-    border-radius: 999px;
-  }
-  .table-hover tbody tr:hover {
-    background: #fbfbff;
-  }
-</style>
-
-<div class="container my-4">
-  <div class="card role-card">
-    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <h5 class="mb-0"><i class="fa-solid fa-user-shield me-2"></i>Role Management</h5>
-      <!-- ✅ Only Create Role button -->
-      <a href="{{ route('admin.roles.create') }}" class="btn btn-light btn-sm">
-        <i class="fa-solid fa-plus me-1"></i>Create Role
-      </a>
+  <div class="nx-page-head">
+    <div>
+      <h1 class="nx-title"><small>Administration</small>Roles</h1>
+      <p class="nx-sub">Manage roles, their hierarchy and permission sets</p>
     </div>
+    @can('roles.create')
+      <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add role
+      </a>
+    @endcan
+  </div>
 
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table align-middle table-hover mb-0">
-          <thead>
+  <div class="card" data-loading-target>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle nx-table">
+        <thead>
+          <tr>
+            <th scope="col" class="d-none d-md-table-cell">ID</th>
+            <th scope="col">Role</th>
+            <th scope="col" class="d-none d-lg-table-cell">Parent role</th>
+            <th scope="col" class="d-none d-md-table-cell">Icon</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($roles as $role)
             <tr>
-              <th style="width: 80px;">ID</th>
-              <th>Role Name</th>
-              <th>Parent Role</th>
-              <th>ROles icon</th>
-              <th style="width: 160px;">Status</th>
-              <th style="width: 160px;" class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @foreach ($roles as $role)
-            <tr>
-              <td>{{$role->id}}</td>
-              <td>{{$role->name}}</td>
-          <td>{{ $role->parent && $role->parent->name ? $role->parent->name : 'No Parent' }}</td>
+              <td class="text-muted d-none d-md-table-cell">{{ $role->id }}</td>
 
-              <td><i class="{{ $role->icon_class }}"></i></td>
+              <td><div class="nx-user-name">{{ $role->name }}</div></td>
 
+              <td class="d-none d-lg-table-cell">
+                {{ $role->parent && $role->parent->name ? $role->parent->name : 'No Parent' }}
+              </td>
 
-              <td> 
-                @if ($role->status == 'active')
-                <span class="status-dot dot-active"></span>
-                <span class="badge bg-success">Active</span>
-                @elseif ($role->status == 'inactive')
-                <span class="status-dot dot-inactive"></span>
-                <span class="badge bg-danger">Inactive</span>
+              <td class="d-none d-md-table-cell">
+                <span class="nx-ico-chip"><i class="{{ $role->icon_class }}"></i></span>
+              </td>
+
+              <td>
+                @if($role->status == 'active')
+                  <span class="badge bg-success">Active</span>
+                @elseif($role->status == 'inactive')
+                  <span class="badge bg-danger">Inactive</span>
                 @endif
               </td>
+
               <td class="text-end">
-               
-                <div class="d-flex gap-2 justify-content-end">
-                     <a href="{{ route('admin.roles.audit-log', $role->id) }}" class="btn btn-outline-secondary btn-sm rounded-circle" data-bs-toggle="tooltip" data-bs-title="View Audit Log">
-                 <i class="fa-solid fa-audit"></i>
-                  </a>
-                <a href="{{ route('admin.roles.permissions.assign', $role->id) }}" class="btn btn-outline-primary btn-sm rounded-circle" data-bs-toggle="tooltip" data-bs-title="Assign Permissions" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                  <i class="fa-solid fa-user-shield"></i>
-                </a>
-                  <a href="{{ route('admin.roles.edit', $role->id) }}" class="btn btn-outline-primary btn-sm rounded-circle" data-bs-toggle="tooltip" data-bs-title="Edit" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-regular fa-pen-to-square"></i>
-                  </a>
-                  <form action="{{ route('admin.roles.delete', $role->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-outline-danger rounded-circle" data-bs-toggle="tooltip" data-bs-title="Delete" onclick="return confirm('Are you sure you want to delete this role?')">
-                      <i class="fa-regular fa-trash-can"></i>
-                    </button>
-                  </form>
+                <div class="d-inline-flex gap-1">
+                  @can('roles.view')
+                    <a href="{{ route('admin.roles.audit-log', $role->id) }}" class="nx-action"
+                       data-tip="Audit log" aria-label="View audit log for {{ $role->name }}">
+                      <i class="fas fa-clipboard-list"></i>
+                    </a>
+                  @endcan
+
+                  @can('roles.assign')
+                    <a href="{{ route('admin.roles.permissions.assign', $role->id) }}" class="nx-action"
+                       data-tip="Assign permissions" aria-label="Assign permissions to {{ $role->name }}">
+                      <i class="fas fa-user-shield"></i>
+                    </a>
+                  @endcan
+
+                  @can('roles.edit')
+                    <a href="{{ route('admin.roles.edit', $role->id) }}" class="nx-action"
+                       data-tip="Edit" aria-label="Edit {{ $role->name }}">
+                      <i class="fas fa-pen"></i>
+                    </a>
+                  @endcan
+
+                  @can('roles.delete')
+                    <form action="{{ route('admin.roles.delete', $role->id) }}" method="POST"
+                          data-confirm="This will permanently delete {{ $role->name }}. This cannot be undone."
+                          data-confirm-title="Delete role?">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="nx-action danger" data-tip="Delete"
+                              aria-label="Delete {{ $role->name }}">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  @endcan
                 </div>
               </td>
             </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
+          @empty
+            <tr>
+              <td colspan="6" class="nx-empty">
+                <i class="fas fa-user-shield"></i>
+                <div class="nx-empty-title">No roles found</div>
+                <div class="nx-empty-sub">Add your first role to get started.</div>
+                @can('roles.create')
+                  <a href="{{ route('admin.roles.create') }}" class="btn btn-light btn-sm mt-3">
+                    <i class="fas fa-plus"></i> Add role
+                  </a>
+                @endcan
+              </td>
+            </tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
 
-      <!-- Footer -->
-      <div class="p-3 d-flex justify-content-between align-items-center"> 
-        <small class="text-muted">Showing <strong>2</strong> roles</small>
-        <nav> {{ $roles->links() }}
-          <ul class="pagination pagination-sm mb-0">
-            <li class="page-item disabled"><span class="page-link">Prev</span></li>
-            <li class="page-item active"><span class="page-link">1</span></li>
-            <li class="page-item"><a class="page-link" href="#">2</a></li>
-            <li class="page-item"><a class="page-link" href="#">Next</a></li>
-          </ul>
-        </nav>
-      </div>
+    <div class="nx-footer-bar">
+      <small class="text-muted">
+        Showing <strong>{{ $roles->firstItem() ?? 0 }}-{{ $roles->lastItem() ?? 0 }}</strong>
+        of <strong>{{ $roles->total() }}</strong> roles
+      </small>
+      @if($roles->hasPages()) {{ $roles->links() }} @endif
     </div>
   </div>
 </div>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Enable tooltips
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
-</script>
 @endsection
