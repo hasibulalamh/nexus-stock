@@ -28,6 +28,11 @@
   --danger: #B91C1C; --danger-bg: #FEE2E2;
   --warn: #92400E;   --warn-bg: #FEF3C7;
   --row-hover: #F3F6FC;          /* table row hover */
+  /* decorative accents for the dashboard stat tiles (shared by both themes) */
+  --stat-1: #14B8A6;             /* users */
+  --stat-2: #F43F5E;             /* roles */
+  --stat-3: #F97316;             /* warehouses */
+  --stat-4: #22C55E;             /* branches */
   --thead-bg: #F6F8FD;           /* soft tint of --surface-2, sits above the row surface */
   --thead-fg: var(--text-2);
   --field-option-bg: #FFFFFF;    /* native <option> surface */
@@ -146,6 +151,7 @@ a { transition: color var(--t); }
 .table tbody tr:last-child > * { border-bottom: 0; }
 .table-hover > tbody > tr:hover > * { background: var(--row-hover) !important; }
 .nx-table tbody tr { height: 60px; }
+.nx-col-num { width: 56px; }   /* narrow row-number column */
 
 .nx-user { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
 .nx-user > div { min-width: 0; }
@@ -315,7 +321,7 @@ textarea.form-control { height: auto; padding: var(--s3); }
 .app-search input::placeholder { color: var(--text-2); opacity: 1; }
 .app-search kbd { background: var(--surface); color: var(--text-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; font-size: .6875rem; box-shadow: none; }
 .app-clock { display: flex; align-items: center; gap: var(--s2); height: 32px; padding: 0 var(--s3); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text-2); font-size: .8125rem; font-weight: 500; font-variant-numeric: tabular-nums; }
-.app-icon-btn { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: 0; background: transparent; color: var(--text-2); cursor: pointer; text-decoration: none; transition: background var(--t), color var(--t); }
+.app-icon-btn { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); border: 0; background: transparent; color: var(--text-2); font-size: 1.125rem; cursor: pointer; text-decoration: none; transition: background var(--t), color var(--t); }
 .app-icon-btn:hover { background: var(--surface-2); color: var(--text); }
 .app-icon-btn:active { transform: scale(.96); }
 .app-user { display: flex; align-items: center; gap: var(--s3); height: 44px; padding: 0 var(--s3) 0 var(--s1); border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text); text-decoration: none; transition: background var(--t); }
@@ -368,6 +374,12 @@ textarea.form-control { height: auto; padding: var(--s3); }
 
 /* ---------- 11. dashboard tiles ---------- */
 .nx-stat .card-body { display: flex; align-items: center; gap: var(--s4); padding: var(--s5); }
+/* one accent per tile; the colour itself always comes from a token */
+.nx-stat-1 { --c: var(--stat-1); }
+.nx-stat-2 { --c: var(--stat-2); }
+.nx-stat-3 { --c: var(--stat-3); }
+.nx-stat-4 { --c: var(--stat-4); }
+.nx-map { height: 320px; }
 .nx-stat-ico { width: 48px; height: 48px; flex: none; border-radius: var(--radius-sm); display: grid; place-items: center; font-size: 1.25rem; color: var(--c, var(--primary)); background: color-mix(in srgb, var(--c, var(--primary)) 14%, transparent); }
 .nx-stat-num { font-size: 1.75rem; font-weight: 700; line-height: 1.1; color: var(--text); }
 .nx-stat-lbl { font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); margin-bottom: var(--s1); }

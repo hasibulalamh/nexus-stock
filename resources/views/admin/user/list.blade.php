@@ -63,7 +63,7 @@
       <table class="table table-hover align-middle nx-table">
         <thead>
           <tr>
-            <th style="width:56px">#</th>
+            <th class="nx-col-num">#</th>
             <th>User</th>
             <th class="d-none d-lg-table-cell">Department</th>
             <th class="d-none d-lg-table-cell">Designation</th>
@@ -135,7 +135,7 @@
             </td>
           </tr>
           @empty
-          <tr style="height:auto">
+          <tr>
             <td colspan="7" class="text-center py-5">
               <i class="fas fa-user-slash fs-3 d-block mb-2 text-muted"></i>
               <div class="fw-semibold">No users found</div>
@@ -166,7 +166,7 @@
             @if(!is_array($v))<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endif
           @endforeach
           <label class="small text-muted mb-0" for="per_page">Rows</label>
-          <select id="per_page" name="per_page" class="form-select form-select-sm" style="width:auto" onchange="nxSubmit(this.form)">
+          <select id="per_page" name="per_page" class="form-select form-select-sm w-auto" onchange="nxSubmit(this.form)">
             @foreach([10, 25, 50] as $n)
               <option value="{{ $n }}" @selected((int) request('per_page', 10) === $n)>{{ $n }}</option>
             @endforeach

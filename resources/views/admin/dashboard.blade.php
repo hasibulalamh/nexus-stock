@@ -19,25 +19,25 @@
   {{-- real counts --}}
   <div class="row">
     <div class="col-sm-6 col-xl-3">
-      <div class="card nx-stat" style="--c:#14b8a6"><div class="card-body">
+      <div class="card nx-stat nx-stat-1"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-users"></i></span>
         <div><div class="nx-stat-lbl">Users</div><div class="nx-stat-num">{{ $count('users') }}</div></div>
       </div></div>
     </div>
     <div class="col-sm-6 col-xl-3">
-      <div class="card nx-stat" style="--c:#f43f5e"><div class="card-body">
+      <div class="card nx-stat nx-stat-2"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-user-shield"></i></span>
         <div><div class="nx-stat-lbl">Roles</div><div class="nx-stat-num">{{ $count('roles') }}</div></div>
       </div></div>
     </div>
     <div class="col-sm-6 col-xl-3">
-      <div class="card nx-stat" style="--c:#f97316"><div class="card-body">
+      <div class="card nx-stat nx-stat-3"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-warehouse"></i></span>
         <div><div class="nx-stat-lbl">Warehouses</div><div class="nx-stat-num">{{ $count('warehouses') }}</div></div>
       </div></div>
     </div>
     <div class="col-sm-6 col-xl-3">
-      <div class="card nx-stat" style="--c:#22c55e"><div class="card-body">
+      <div class="card nx-stat nx-stat-4"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-store"></i></span>
         <div><div class="nx-stat-lbl">Branches</div><div class="nx-stat-num">{{ $count('branches') }}</div></div>
       </div></div>
@@ -125,7 +125,7 @@
     <div class="col-12 col-xl-8 d-flex">
       <div class="card flex-fill w-100">
         <div class="card-header"><h5 class="card-title mb-0">Locations <span class="nx-sample">SAMPLE</span></h5></div>
-        <div class="card-body px-4"><div id="world_map" style="height:320px;"></div></div>
+        <div class="card-body px-4"><div id="world_map" class="nx-map"></div></div>
       </div>
     </div>
     <div class="col-12 col-xl-4 d-flex">

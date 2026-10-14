@@ -6,7 +6,7 @@
   <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
     <h1 class="h3 nx-title mb-0"><small>Administration</small>Create User</h1>
     <a href="{{ route('admin.users.list') }}" class="btn btn-light">
-      <i class="fas fa-arrow-left me-1"></i> Back
+      <i class="fas fa-arrow-left"></i> Back
     </a>
   </div>
 
@@ -28,7 +28,7 @@
         <div class="row g-4">
 
           <div class="col-12">
-            <div class="nx-section" style="--c:#14b8a6"><i class="fas fa-user"></i> Personal Information</div>
+            <div class="nx-section"><i class="fas fa-user"></i> Personal Information</div>
             <hr>
           </div>
 
@@ -60,7 +60,7 @@
           </div>
 
           <div class="col-12 mt-4">
-            <div class="nx-section" style="--c:#f43f5e"><i class="fas fa-lock"></i> Login Credentials</div>
+            <div class="nx-section"><i class="fas fa-lock"></i> Login Credentials</div>
             <hr>
           </div>
 
@@ -77,7 +77,7 @@
           </div>
 
           <div class="col-12 mt-4">
-            <div class="nx-section" style="--c:#f97316"><i class="fas fa-building"></i> Employment Details</div>
+            <div class="nx-section"><i class="fas fa-building"></i> Employment Details</div>
             <hr>
           </div>
 
@@ -141,12 +141,12 @@
 
         </div>
 
-        <div class="d-flex justify-content-end gap-2 mt-4 pt-3" style="border-top:2px dashed var(--nx-line)">
+        <div class="nx-form-actions">
           <button type="reset" class="btn btn-outline-secondary">
-            <i class="fas fa-rotate-left me-1"></i> Reset
+            <i class="fas fa-rotate-left"></i> Reset
           </button>
-          <button type="submit" class="btn btn-success">
-            <i class="fas fa-floppy-disk me-1"></i> Save User
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-floppy-disk"></i> Save User
           </button>
         </div>
       </form>

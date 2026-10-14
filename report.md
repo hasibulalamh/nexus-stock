@@ -250,15 +250,27 @@ the login page in `d52624d`:
   + FontAwesome + `nexus.css` linked instead of re-declared inline. The page now reuses
   the panel's form components and `nexus.js`'s submit loading state, so its bespoke
   spinner CSS and handler were dropped. Form contract untouched (see §3).
+* The last inline colour literals were removed from the panel's views, so **no view in the
+  admin panel declares a colour or an inline style any more**:
+  * `admin/dashboard.blade.php` — the four `style="--c:#14b8a6"` tile colours and
+    `style="height:320px"` replaced by `--stat-1…4` tokens (new, `:root`) consumed through
+    `.nx-stat-1…4 { --c: var(--stat-N) }`, `.nx-stat-ico`, `.nx-stat-num`, `.nx-stat-lbl`.
+    No literal remains in the view; the chart height now comes from a CSS rule.
+  * `admin/user/create.blade.php` — the three section-header `style="--c:#…"` values and
+    the inline `border-top:2px dashed var(--nx-line)` action footer replaced by the shared
+    `.nx-section` / `.nx-form-actions` classes; stray `me-1` on button icons dropped
+    (spacing comes from the button gap) and the submit button moved off Bootstrap's
+    `btn-success`/`btn-danger` colour names to `btn-primary`/`.nx-status-toggle` tokens.
+  * `admin/user/list.blade.php` — `style="width:56px"` → `.nx-col-num`,
+    `style="height:auto"` → removed, `style="width:auto"` → Bootstrap's `w-auto` utility.
+  * `layout/sidebar.blade.php` — the unused `style="--c:#…"` literals (nothing read `--c`
+    on `.ns-link`) were already dropped earlier in the branch.
 
 **Reported, not fixed** (files outside this task's edits):
 
 | File | Issue |
 | --- | --- |
 | `resources/views/welcome.blade.php` | Laravel's default welcome page, `<style>` block + inline `mix-blend-mode` (not part of the admin panel) |
-| `resources/views/admin/dashboard.blade.php` | inline `style="--c:#14b8a6"`-style tile colours (×4) and `style="height:320px"` |
-| `resources/views/admin/user/create.blade.php` | inline `style="--c:#…"` on section headers (×3), inline `border-top:2px dashed var(--nx-line)` footer |
-| `resources/views/admin/user/list.blade.php` | inline `style="width:56px"`, `style="height:auto"`, `style="width:auto"` |
 | `permission/create.blade.php` | correctly absent; not recreated |
 
 ---
@@ -271,7 +283,7 @@ the login page in `d52624d`:
 | Compiled template syntax | `php -l` over all 67 compiled templates in `storage/framework/views` | 0 syntax errors |
 | View cache clear | `php artisan view:clear` | OK |
 | JS syntax | `node --check public/assets/js/nexus.js` | syntax OK |
-| Contrast | `python3 /tmp/nx_contrast.py` (parses `nexus.css` tokens) | 46/46 pairs OK, 0 failing |
+| Contrast | `python3 /tmp/nx_contrast.py` (parses `nexus.css` tokens) | 48/48 pairs OK, 0 failing |
 | Colour literals in component rules | token-block-stripping script | 0 |
 | Duplicate selectors | selector scan | only the intentional media-query/keyframe/split-property cases |
 | No `<style>` / inline colours / CDN scripts in edited files | `grep` | clean — only `welcome.blade.php` (Laravel's default page, not in the panel) still has a `<style>` block |
@@ -280,7 +292,8 @@ the login page in `d52624d`:
 | No `data-bs-toggle="tooltip"` / `text-bg-*` / `onclick="return confirm"` in edited files | `grep` | clean |
 | No dead controls left | `grep -rn 'href=""\|action=""' resources/views` | none |
 | Location table columns line up | `<th>` count vs empty-state `colspan` | 7 = 7 |
-| Custom classes used in views exist in CSS | script comparing `nx-`/`ns-`/`app-` classes | 0 missing |
+| Custom classes used in views exist in CSS | script comparing `nx-`/`ns-`/`app-` classes | 0 missing (incl. new `.nx-stat-*`, `.nx-col-num`, `.nx-form-actions`) |
+| No inline style or colour literal in panel views | `grep -rn 'style="'` / `grep -rn '#[0-9A-Fa-f]\{6\}'` over `resources/views` | none outside `welcome.blade.php` |
 | Icon-only controls have `aria-label` | script (PHP `->` aware) | 0 missing |
 | Routes unchanged | `php artisan route:list` | 63 total / 57 admin — identical to before |
 | Test suite | `php artisan test` | 46 failed / 9 passed — **byte-identical to baseline `639c3bf`**, re-run in a throwaway `git worktree` |
