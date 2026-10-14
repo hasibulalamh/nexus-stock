@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Department;
 use App\Models\Designation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\File;
@@ -217,5 +218,57 @@ class UserController extends Controller
         return redirect()
             ->route('admin.users.list')
             ->with('success', '✅ User updated successfully!');
+    }
+
+    // Soft delete an existing user (guards below)
+    public function delete($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($error = $this->guardStatusChange($user, 'delete')) {
+            return redirect()->back()->with('error', $error);
+        }
+
+        // Drop active sessions so the user is signed out immediately.
+        DB::table('sessions')->where('user_id', $user->id)->delete();
+
+        $user->delete();
+
+        return redirect()->route('admin.users.list')->with('success', 'User deleted');
+    }
+
+    /**
+     * Shared guards for delete / restrict / restore.
+     * Returns an error message when the action is not allowed, null otherwise.
+     */
+    private function guardStatusChange(User $target, string $action): ?string
+    {
+        $actor = auth()->user();
+
+        if (!$actor) {
+            return 'Authentication required.';
+        }
+
+        if ($target->id === $actor->id) {
+            return "You cannot {$action} your own account.";
+        }
+
+        if ($target->hasRole('superadmin') && !$actor->hasRole('superadmin')) {
+            return "Only a superadmin can {$action} a superadmin account.";
+        }
+
+        // Never let the last active superadmin disappear.
+        if ($target->hasRole('superadmin') && $target->status === 'active') {
+            $otherActiveSuperadmins = User::where('id', '!=', $target->id)
+                ->where('status', 'active')
+                ->whereHas('roles', fn($q) => $q->where('name', 'superadmin'))
+                ->count();
+
+            if ($otherActiveSuperadmins === 0) {
+                return "The last active superadmin cannot be {$action}d.";
+            }
+        }
+
+        return null;
     }
 }
