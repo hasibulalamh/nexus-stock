@@ -42,7 +42,7 @@
                 <a class="app-icon-btn" href="#" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" aria-label="Notifications">
                     <i class="fas fa-bell"></i>
                 </a>
-                <div class="dropdown-menu dropdown-menu-end app-dropdown p-0" style="min-width: 280px;">
+                <div class="dropdown-menu dropdown-menu-end app-dropdown app-dropdown--wide p-0">
                     <div class="app-dropdown-head">Notifications</div>
                     <div class="text-center text-muted py-4 small">
                         <i class="far fa-bell-slash d-block mb-2 fs-4"></i>
@@ -53,7 +53,7 @@
 
             {{-- user --}}
             <li class="nav-item dropdown ms-2">
-                <a class="app-user dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                <a class="app-user dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
                     <img src="{{ auth()->user()->profile_photo_url }}" alt="{{ auth()->user()->full_name }}">
                     <span class="d-none d-sm-flex flex-column lh-1 text-start">
                         <span class="app-user-name">{{ auth()->user()->full_name }}</span>
@@ -61,14 +61,15 @@
                     </span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end app-dropdown">
-                    <div class="app-dropdown-head">
-                        {{ auth()->user()->email }}
+                    <div class="app-dropdown-user">
+                        <span class="name">{{ auth()->user()->full_name }}</span>
+                        <span class="mail">{{ auth()->user()->email }}</span>
                     </div>
                     <div class="dropdown-divider"></div>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="dropdown-item text-danger">
-                            <i class="fas fa-sign-out-alt me-2"></i> Log out
+                            <i class="fas fa-sign-out-alt"></i> Log out
                         </button>
                     </form>
                 </div>

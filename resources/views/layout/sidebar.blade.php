@@ -1,5 +1,3 @@
-
-
 <nav id="sidebar" class="sidebar js-sidebar ns-sidebar">
     <div class="sidebar-content js-simplebar">
 
@@ -16,7 +14,7 @@
         <ul class="ns-nav">
             <li>
                 <a class="ns-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
-                   style="--c:#6366f1" href="{{ route('admin.dashboard') }}">
+                   href="{{ route('admin.dashboard') }}">
                     <span class="ns-ico"><i class="fas fa-gauge-high"></i></span>
                     <span>Dashboard</span><i class="ns-dot"></i>
                 </a>
@@ -30,7 +28,7 @@
                 @can('users.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
-                           style="--c:#14b8a6" href="{{ route('admin.users.list') }}">
+                           href="{{ route('admin.users.list') }}">
                             <span class="ns-ico"><i class="fas fa-users"></i></span>
                             <span>Users</span><i class="ns-dot"></i>
                         </a>
@@ -39,7 +37,7 @@
                 @can('roles.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
-                           style="--c:#f43f5e" href="{{ route('admin.roles.list') }}">
+                           href="{{ route('admin.roles.list') }}">
                             <span class="ns-ico"><i class="fas fa-user-shield"></i></span>
                             <span>Roles</span><i class="ns-dot"></i>
                         </a>
@@ -48,7 +46,7 @@
                 @can('permissions.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.permissions.*') ? 'active' : '' }}"
-                           style="--c:#f59e0b" href="{{ route('admin.permissions.list') }}">
+                           href="{{ route('admin.permissions.list') }}">
                             <span class="ns-ico"><i class="fas fa-key"></i></span>
                             <span>Permissions</span><i class="ns-dot"></i>
                         </a>
@@ -57,7 +55,7 @@
                 @can('departments.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.departments.*') ? 'active' : '' }}"
-                           style="--c:#8b5cf6" href="{{ route('admin.departments.list') }}">
+                           href="{{ route('admin.departments.list') }}">
                             <span class="ns-ico"><i class="fas fa-sitemap"></i></span>
                             <span>Departments</span><i class="ns-dot"></i>
                         </a>
@@ -66,7 +64,7 @@
                 @can('designations.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.designations.*') ? 'active' : '' }}"
-                           style="--c:#ec4899" href="{{ route('admin.designations.list') }}">
+                           href="{{ route('admin.designations.list') }}">
                             <span class="ns-ico"><i class="fas fa-id-badge"></i></span>
                             <span>Designations</span><i class="ns-dot"></i>
                         </a>
@@ -75,7 +73,7 @@
                 @can('locations.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}"
-                           style="--c:#0ea5e9" href="{{ route('admin.locations.list') }}">
+                           href="{{ route('admin.locations.list') }}">
                             <span class="ns-ico"><i class="fas fa-map-location-dot"></i></span>
                             <span>Locations</span><i class="ns-dot"></i>
                         </a>
@@ -91,7 +89,7 @@
                 @can('warehouses.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.warehouse.*') ? 'active' : '' }}"
-                           style="--c:#f97316" href="{{ route('admin.warehouse.list') }}">
+                           href="{{ route('admin.warehouse.list') }}">
                             <span class="ns-ico"><i class="fas fa-warehouse"></i></span>
                             <span>Warehouses</span><i class="ns-dot"></i>
                         </a>
@@ -100,7 +98,7 @@
                 @can('branches.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.branch.*') ? 'active' : '' }}"
-                           style="--c:#22c55e" href="{{ route('admin.branch.list') }}">
+                           href="{{ route('admin.branch.list') }}">
                             <span class="ns-ico"><i class="fas fa-store"></i></span>
                             <span>Branches</span><i class="ns-dot"></i>
                         </a>
