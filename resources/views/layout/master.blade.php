@@ -60,9 +60,17 @@
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       var ctx = document.getElementById("chartjs-dashboard-line").getContext("2d");
+      // Area fill colour comes from the --chart-fill token; alpha is applied here.
+      var hex = getComputedStyle(document.documentElement).getPropertyValue("--chart-fill").trim().replace("#", "");
+      if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      var rgb = /^[0-9a-f]{6}$/i.test(hex) ? parseInt(hex, 16) : null;
+      function fill(a) {
+        if (rgb === null) return "transparent";
+        return "rgba(" + ((rgb >> 16) & 255) + ", " + ((rgb >> 8) & 255) + ", " + (rgb & 255) + ", " + a + ")";
+      }
       var gradient = ctx.createLinearGradient(0, 0, 0, 225);
-      gradient.addColorStop(0, "rgba(215, 227, 244, 1)");
-      gradient.addColorStop(1, "rgba(215, 227, 244, 0)");
+      gradient.addColorStop(0, fill(1));
+      gradient.addColorStop(1, fill(0));
       // Line chart
       new Chart(document.getElementById("chartjs-dashboard-line"), {
         type: "line",
@@ -83,12 +91,12 @@
           hover: { intersect: true },
           plugins: { filler: { propagate: false } },
           scales: {
-            xAxes: [{ reverse: true, gridLines: { color: "rgba(0,0,0,0.0)" } }],
+            xAxes: [{ reverse: true, gridLines: { color: "transparent" } }],
             yAxes: [{
               ticks: { stepSize: 1000 },
               display: true,
               borderDash: [3, 3],
-              gridLines: { color: "rgba(0,0,0,0.0)" }
+              gridLines: { color: "transparent" }
             }]
           }
         }

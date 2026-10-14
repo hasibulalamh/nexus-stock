@@ -33,6 +33,7 @@
   --stat-2: #F43F5E;             /* roles */
   --stat-3: #F97316;             /* warehouses */
   --stat-4: #22C55E;             /* branches */
+  --chart-fill: #D7E3F4;         /* dashboard line-chart area fill; alpha is applied in JS */
   --thead-bg: #F6F8FD;           /* soft tint of --surface-2, sits above the row surface */
   --thead-fg: var(--text-2);
   --field-option-bg: #FFFFFF;    /* native <option> surface */
