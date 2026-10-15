@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Department;
 use App\Models\Designation;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -236,6 +237,45 @@ class CrudValidationTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.users.edit', $this->admin->id))
             ->assertOk();
+    }
+
+    public function test_user_store_rolls_back_when_allocation_sync_fails(): void
+    {
+        $role = Role::firstOrFail();
+        $dept = Department::firstOrFail();
+        $desig = Designation::firstOrFail();
+        $before = User::count();
+
+        $this->partialMock(UserController::class, function ($mock): void {
+            $mock->shouldReceive('syncAllocations')
+                ->once()
+                ->andThrow(new \RuntimeException('forced allocation sync failure'));
+        });
+        $this->withoutExceptionHandling();
+
+        try {
+            $this->actingAs($this->admin)->post(route('admin.users.store'), [
+                'full_name' => 'Rollback User',
+                'email' => 'rollback@example.com',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+                'phone' => '01712345678',
+                'gender' => 'male',
+                'employee_id' => 'EMP-ROLLBACK',
+                'role_id' => $role->id,
+                'department_id' => $dept->id,
+                'designation_id' => $desig->id,
+                'join_date' => '2026-01-01',
+                'status' => 'active',
+                'branch_ids' => [],
+                'warehouse_ids' => [],
+            ]);
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('forced allocation sync failure', $exception->getMessage());
+        }
+
+        $this->assertSame($before, User::count());
+        $this->assertDatabaseMissing('users', ['email' => 'rollback@example.com']);
     }
 
     /** TEST-030 */

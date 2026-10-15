@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\File;
+use Throwable;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -90,47 +91,55 @@ class UserController extends Controller
             return redirect()->back()->withInput()->with('error', 'Only a superadmin can assign or edit a superadmin account.');
         }
 
-        // Ensure upload folder exists
-        $uploadPath = public_path('uploads/user');
-        if (!File::exists($uploadPath)) {
-            File::makeDirectory($uploadPath, 0777, true, true);
-        }
+        $newPhotoPath = null;
 
-        // Handle profile photo
-        $filename = 'default.png';
-        if ($request->hasFile('profile_photo')) {
-            $profile_photo = $request->file('profile_photo');
-            $filename = time() . '.' . $profile_photo->getClientOriginalExtension();
-            $profile_photo->move($uploadPath, $filename);
-        }
+        try {
+            $user = DB::transaction(function () use ($request, $requestedRole, &$newPhotoPath) {
+                $filename = 'default.png';
 
-        // Create user
-        $user = User::create([
-            'full_name' => $request->full_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'gender' => $request->gender,
-            'employee_id' => $request->employee_id,
-            'role_id' => $request->role_id,
-            'department_id' => $request->department_id,
-            'designation_id' => $request->designation_id,
-            'join_date' => $request->join_date,
-            'profile_photo' => $filename,
-            'status' => $request->status,
-            'access_all' => $request->boolean('access_all'),
-        ]);
+                if ($request->hasFile('profile_photo')) {
+                    $uploadPath = public_path('uploads/user');
+                    if (!File::exists($uploadPath)) {
+                        File::makeDirectory($uploadPath, 0777, true, true);
+                    }
 
-        // Assign branch/warehouse access (skipped while access_all is on so a
-        // previous assignment is kept for when the flag is turned off again).
-        if (!$request->boolean('access_all')) {
-            $user->branches()->sync($request->input('branch_ids', []));
-            $user->warehouses()->sync($request->input('warehouse_ids', []));
-        }
+                    $filename = time() . '.' . $request->file('profile_photo')->getClientOriginalExtension();
+                    $request->file('profile_photo')->move($uploadPath, $filename);
+                    $newPhotoPath = $uploadPath . '/' . $filename;
+                }
 
-        // Assign role safely (the guard above already vetted the assignment)
-        if ($requestedRole && !$user->hasRole($requestedRole->name)) {
-            $user->assignRole($requestedRole->name);
+                $user = User::create([
+                    'full_name' => $request->full_name,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                    'phone' => $request->phone,
+                    'gender' => $request->gender,
+                    'employee_id' => $request->employee_id,
+                    'role_id' => $request->role_id,
+                    'department_id' => $request->department_id,
+                    'designation_id' => $request->designation_id,
+                    'join_date' => $request->join_date,
+                    'profile_photo' => $filename,
+                    'status' => $request->status,
+                    'access_all' => $request->boolean('access_all'),
+                ]);
+
+                if (!$request->boolean('access_all')) {
+                    $this->syncAllocations($user, $request);
+                }
+
+                if ($requestedRole) {
+                    $user->syncRoles([$requestedRole->name]);
+                }
+
+                return $user;
+            });
+        } catch (Throwable $exception) {
+            if ($newPhotoPath && File::exists($newPhotoPath)) {
+                File::delete($newPhotoPath);
+            }
+
+            throw $exception;
         }
 
         return redirect()
@@ -207,40 +216,47 @@ class UserController extends Controller
             $attributes['password'] = $request->password;
         }
 
-        // Handle a replacement profile photo (keep the old file name around so
-        // the replaced file can be removed after a successful update).
         $oldPhoto = null;
-        if ($request->hasFile('profile_photo')) {
-            $uploadPath = public_path('uploads/user');
-            if (!File::exists($uploadPath)) {
-                File::makeDirectory($uploadPath, 0777, true, true);
-            }
-
-            $profile_photo = $request->file('profile_photo');
-            $filename = time() . '.' . $profile_photo->getClientOriginalExtension();
-            $profile_photo->move($uploadPath, $filename);
-
-            $oldPhoto = $user->profile_photo;
-            $attributes['profile_photo'] = $filename;
-        }
-
-        // Access assignment: a user may never change their own access.
         $editingOwnAccess = $user->id === $request->user()->id;
         if (!$editingOwnAccess) {
             $attributes['access_all'] = $request->boolean('access_all');
         }
 
-        $user->update($attributes);
+        $newPhotoPath = null;
 
-        // The pickers are hidden while access_all is on, so sync only happens
-        // when the flag is off (a previous assignment is kept for later).
-        if (!$editingOwnAccess && !$request->boolean('access_all')) {
-            $user->branches()->sync($request->input('branch_ids', []));
-            $user->warehouses()->sync($request->input('warehouse_ids', []));
+        try {
+            DB::transaction(function () use ($request, $requestedRole, $attributes, $user, $editingOwnAccess, &$oldPhoto, &$newPhotoPath) {
+                if ($request->hasFile('profile_photo')) {
+                    $uploadPath = public_path('uploads/user');
+                    if (!File::exists($uploadPath)) {
+                        File::makeDirectory($uploadPath, 0777, true, true);
+                    }
+
+                    $filename = time() . '.' . $request->file('profile_photo')->getClientOriginalExtension();
+                    $request->file('profile_photo')->move($uploadPath, $filename);
+                    $newPhotoPath = $uploadPath . '/' . $filename;
+                    $oldPhoto = $user->profile_photo;
+                    $attributes['profile_photo'] = $filename;
+                }
+
+                $user->update($attributes);
+
+                if (!$editingOwnAccess && !$request->boolean('access_all')) {
+                    $this->syncAllocations($user, $request);
+                }
+
+                if ($requestedRole) {
+                    $user->syncRoles([$requestedRole->name]);
+                }
+            });
+        } catch (Throwable $exception) {
+            if ($newPhotoPath && File::exists($newPhotoPath)) {
+                File::delete($newPhotoPath);
+            }
+
+            throw $exception;
         }
 
-        // Remove the replaced photo only when it was a real, different file —
-        // never the default avatar shipped with the app.
         if ($oldPhoto && $oldPhoto !== 'default.png' && $oldPhoto !== $user->profile_photo) {
             $oldPath = public_path('uploads/user/' . $oldPhoto);
             if (File::exists($oldPath)) {
@@ -248,15 +264,15 @@ class UserController extends Controller
             }
         }
 
-        // A user holds a single role: keep users.role_id and the Spatie role in
-        // sync by always mirroring the submitted role (also prunes stale roles).
-        if ($requestedRole) {
-            $user->syncRoles([$requestedRole->name]);
-        }
-
         return redirect()
             ->route('admin.users.list')
             ->with('success', '✅ User updated successfully!');
+    }
+
+    public function syncAllocations(User $user, Request $request): void
+    {
+        $user->branches()->sync($request->input('branch_ids', []));
+        $user->warehouses()->sync($request->input('warehouse_ids', []));
     }
 
     // Soft delete an existing user (guards below)
