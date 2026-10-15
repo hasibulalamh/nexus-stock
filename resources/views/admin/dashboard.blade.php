@@ -9,8 +9,8 @@
     <span class="text-muted fs-6">({{ $role?->name ?? 'No role' }})</span>
   </h1>
 
-  {{-- real counts --}}
-  <div class="row">
+  @canany(['users.view', 'roles.view', 'warehouses.view', 'branches.view'])
+  <div class="row g-4">
     @can('users.view')
     <div class="col-sm-6 col-xl-3">
       <div class="card nx-stat nx-stat-1"><div class="card-body">
@@ -44,9 +44,11 @@
     </div>
     @endcan
   </div>
+  @endcanany
 
-  <div class="row">
-    <div class="col-xl-8 d-flex">
+  @if($showSampleWidgets)
+  <div class="row g-4">
+    <div class="col-12 col-xl-8 d-flex">
       <div class="card flex-fill w-100">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="card-title mb-0">Recent Movement <span class="nx-sample">SAMPLE</span></h5>
@@ -56,7 +58,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-4 d-flex">
+    <div class="col-12 col-xl-4 d-flex">
       <div class="card flex-fill w-100">
         <div class="card-header"><h5 class="card-title mb-0">Stock Share <span class="nx-sample">SAMPLE</span></h5></div>
         <div class="card-body d-flex">
@@ -75,17 +77,43 @@
     </div>
   </div>
 
-  <div class="row">
-    @can('users.view')
+  <div class="row g-4">
     <div class="col-12 col-xl-8 d-flex">
+      <div class="card flex-fill w-100">
+        <div class="card-header"><h5 class="card-title mb-0">Monthly Sales <span class="nx-sample">SAMPLE</span></h5></div>
+        <div class="card-body d-flex w-100">
+          <div class="align-self-center chart chart-lg"><canvas id="chartjs-dashboard-bar"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-4 d-flex">
+      <div class="card flex-fill w-100">
+        <div class="card-header"><h5 class="card-title mb-0">Locations <span class="nx-sample">SAMPLE</span></h5></div>
+        <div class="card-body px-4"><div id="world_map" class="nx-map"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-xl-8 d-flex">
+      <div class="card flex-fill w-100">
+        <div class="card-header"><h5 class="card-title mb-0">Calendar</h5></div>
+        <div class="card-body d-flex">
+          <div class="align-self-center w-100"><div class="chart"><div id="datetimepicker-dashboard"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  @endif
+
+  @can('users.view')
+  <div class="row g-4">
+    <div class="col-12 d-flex">
       <div class="card flex-fill">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="card-title mb-0">Recent Users</h5>
-          @can('users.view')
-            <a href="{{ route('admin.users.list') }}" class="btn btn-light btn-sm">View all</a>
-          @endcan
+          <a href="{{ route('admin.users.list') }}" class="btn btn-light btn-sm">View all</a>
         </div>
-        @endcan
         <div class="table-responsive">
           <table class="table table-hover align-middle">
             <thead>
@@ -113,33 +141,8 @@
         </div>
       </div>
     </div>
-
-    <div class="col-12 col-xl-4 d-flex">
-      <div class="card flex-fill w-100">
-        <div class="card-header"><h5 class="card-title mb-0">Monthly Sales <span class="nx-sample">SAMPLE</span></h5></div>
-        <div class="card-body d-flex w-100">
-          <div class="align-self-center chart chart-lg"><canvas id="chartjs-dashboard-bar"></canvas></div>
-        </div>
-      </div>
-    </div>
   </div>
-
-  <div class="row">
-    <div class="col-12 col-xl-8 d-flex">
-      <div class="card flex-fill w-100">
-        <div class="card-header"><h5 class="card-title mb-0">Locations <span class="nx-sample">SAMPLE</span></h5></div>
-        <div class="card-body px-4"><div id="world_map" class="nx-map"></div></div>
-      </div>
-    </div>
-    <div class="col-12 col-xl-4 d-flex">
-      <div class="card flex-fill">
-        <div class="card-header"><h5 class="card-title mb-0">Calendar</h5></div>
-        <div class="card-body d-flex">
-          <div class="align-self-center w-100"><div class="chart"><div id="datetimepicker-dashboard"></div></div></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  @endcan
 
 </div>
 @endsection

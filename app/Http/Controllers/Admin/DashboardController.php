@@ -36,6 +36,7 @@ class DashboardController extends Controller
 
         return view('admin.dashboard', [
             'role' => $user->roles->first(),
+            'showSampleWidgets' => $user->hasAccessAll(),
             'usersCount' => $users->count(),
             'rolesCount' => \Spatie\Permission\Models\Role::count(),
             'branchesCount' => $branchesCount,

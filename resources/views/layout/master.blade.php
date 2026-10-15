@@ -59,7 +59,9 @@
   @if(request()->routeIs('admin.dashboard'))
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      var ctx = document.getElementById("chartjs-dashboard-line").getContext("2d");
+      var lineCanvas = document.getElementById("chartjs-dashboard-line");
+      if (!lineCanvas) return;
+      var ctx = lineCanvas.getContext("2d");
       // Area fill colour comes from the --chart-fill token; alpha is applied here.
       var hex = getComputedStyle(document.documentElement).getPropertyValue("--chart-fill").trim().replace("#", "");
       if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
@@ -72,7 +74,7 @@
       gradient.addColorStop(0, fill(1));
       gradient.addColorStop(1, fill(0));
       // Line chart
-      new Chart(document.getElementById("chartjs-dashboard-line"), {
+      new Chart(lineCanvas, {
         type: "line",
         data: {
           labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -105,8 +107,10 @@
   </script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      var pieCanvas = document.getElementById("chartjs-dashboard-pie");
+      if (!pieCanvas) return;
       // Pie chart
-      new Chart(document.getElementById("chartjs-dashboard-pie"), {
+      new Chart(pieCanvas, {
         type: "pie",
         data: {
           labels: ["Chrome", "Firefox", "IE"],
@@ -127,8 +131,10 @@
   </script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      var barCanvas = document.getElementById("chartjs-dashboard-bar");
+      if (!barCanvas) return;
       // Bar chart
-      new Chart(document.getElementById("chartjs-dashboard-bar"), {
+      new Chart(barCanvas, {
         type: "bar",
         data: {
           labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -156,6 +162,8 @@
   </script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      var mapElement = document.getElementById("world_map");
+      if (!mapElement) return;
       var markers = [
         { coords: [31.230391, 121.473701], name: "Shanghai" },
         { coords: [28.704060, 77.102493], name: "Delhi" },
@@ -186,9 +194,11 @@
   </script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      var calendarElement = document.getElementById("datetimepicker-dashboard");
+      if (!calendarElement) return;
       var date = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
       var defaultDate = date.getUTCFullYear() + "-" + (date.getUTCMonth() + 1) + "-" + date.getUTCDate();
-      document.getElementById("datetimepicker-dashboard").flatpickr({
+      calendarElement.flatpickr({
         inline: true,
         prevArrow: "<span title=\"Previous month\">&laquo;</span>",
         nextArrow: "<span title=\"Next month\">&raquo;</span>",

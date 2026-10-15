@@ -81,12 +81,45 @@ class PermissionVisibilityTest extends TestCase
 
     public function test_superadmin_sees_dashboard_and_all_module_links(): void
     {
-        $this->actingAs($this->superadmin)->get(route('admin.dashboard'))
+        $response = $this->actingAs($this->superadmin)->get(route('admin.dashboard'));
+
+        $response
             ->assertOk()
             ->assertSee('Dashboard')
             ->assertSee('Users')
             ->assertSee('Branches')
-            ->assertSee('Warehouses');
+            ->assertSee('Warehouses')
+            ->assertSee('SAMPLE');
+        $this->assertSame(
+            substr_count($response->getContent(), '<div'),
+            substr_count($response->getContent(), '</div>')
+        );
+    }
+
+    public function test_branch_dashboard_has_balanced_markup_without_sample_widgets(): void
+    {
+        $user = $this->makeUser('Branch Dashboard', ['dashboard.view', 'branches.view']);
+
+        $response = $this->actingAs($user)->get(route('admin.dashboard'));
+
+        $response->assertOk()->assertDontSee('SAMPLE');
+        $this->assertSame(
+            substr_count($response->getContent(), '<div'),
+            substr_count($response->getContent(), '</div>')
+        );
+    }
+
+    public function test_dashboard_only_user_has_no_empty_widget_rows(): void
+    {
+        $user = $this->makeUser('Dashboard Only', ['dashboard.view']);
+
+        $response = $this->actingAs($user)->get(route('admin.dashboard'));
+
+        $response->assertOk()->assertDontSee('SAMPLE');
+        $this->assertSame(
+            substr_count($response->getContent(), '<div'),
+            substr_count($response->getContent(), '</div>')
+        );
     }
 
     public function test_scoped_dashboard_counts_allocated_branches_and_warehouses(): void
