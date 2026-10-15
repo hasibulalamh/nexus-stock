@@ -15,9 +15,12 @@ use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Warehouse\WarehouseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Services\LandingService;
 
 Route::get('/', function () {
-    return redirect()->route(Auth::check() ? 'admin.dashboard' : 'login');
+    return Auth::check()
+        ? app(LandingService::class)->redirect(Auth::user())
+        : redirect()->route('login');
 });
 
 Route::get('login', [LoginController::class, 'view'])->name('login');
@@ -30,7 +33,9 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
 //logout
 
 // dashboard
-    Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'dashboard'])
+        ->middleware('can:dashboard.view')
+        ->name('dashboard');
 
     // role
     Route::get('roles', [RoleController::class, 'list'])->middleware('can:roles.view')->name('roles.list');

@@ -15,6 +15,7 @@ class PermissionSeeder extends Seeder
 
         // module => actions. Names must match the can:... middleware in routes/web.php
         $modules = [
+            'dashboard'    => ['view'],
             'roles'        => ['view', 'create', 'edit', 'delete', 'assign'],
             'permissions'  => ['view', 'edit'],
             'users'        => ['view', 'create', 'edit', 'delete', 'status'],

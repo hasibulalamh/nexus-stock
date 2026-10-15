@@ -10,16 +10,18 @@
         </a>
 
         {{-- ===== main ===== --}}
-        <span class="ns-group">Main</span>
-        <ul class="ns-nav">
-            <li>
-                <a class="ns-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
-                   href="{{ route('admin.dashboard') }}">
-                    <span class="ns-ico"><i class="fas fa-gauge-high"></i></span>
-                    <span>Dashboard</span><i class="ns-dot"></i>
-                </a>
-            </li>
-        </ul>
+        @can('dashboard.view')
+            <span class="ns-group">Main</span>
+            <ul class="ns-nav">
+                <li>
+                    <a class="ns-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                       href="{{ route('admin.dashboard') }}">
+                        <span class="ns-ico"><i class="fas fa-gauge-high"></i></span>
+                        <span>Dashboard</span><i class="ns-dot"></i>
+                    </a>
+                </li>
+            </ul>
+        @endcan
 
         {{-- ===== administration ===== --}}
         @canany(['roles.view', 'permissions.view', 'users.view', 'departments.view', 'designations.view', 'locations.view'])
