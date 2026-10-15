@@ -182,7 +182,7 @@ class DatabaseAndSecurityTest extends TestCase
         $hasPdoUse = str_contains($contents, 'use PDO;');
         $hasPdoUsage = str_contains($contents, 'new PDO') || str_contains($contents, 'PDO::');
 
-        $this->assertTrue($hasPdoUse, 'Unused use PDO is present');
+        $this->assertFalse($hasPdoUse, 'Dashboard should not carry an unused PDO import');
         $this->assertFalse($hasPdoUsage, 'PDO never actually used - dead import');
     }
 

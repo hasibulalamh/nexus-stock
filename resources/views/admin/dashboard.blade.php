@@ -1,47 +1,48 @@
 @extends('layout.master')
 
 @section('content')
-@php
-    $count = function ($table) {
-        try { return \Illuminate\Support\Facades\DB::table($table)->count(); }
-        catch (\Throwable $e) { return 0; }
-    };
-    $recentUsers = \App\Models\User::latest()->take(6)->get();
-@endphp
-
 <div class="container-fluid p-0">
 
   <h1 class="h3 nx-title">
     <small>Overview</small>
     Welcome back, {{ auth()->user()->full_name }}
+    <span class="text-muted fs-6">({{ $role?->name ?? 'No role' }})</span>
   </h1>
 
   {{-- real counts --}}
   <div class="row">
+    @can('users.view')
     <div class="col-sm-6 col-xl-3">
       <div class="card nx-stat nx-stat-1"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-users"></i></span>
-        <div><div class="nx-stat-lbl">Users</div><div class="nx-stat-num">{{ $count('users') }}</div></div>
+        <div><div class="nx-stat-lbl">Users</div><div class="nx-stat-num">{{ $usersCount }}</div></div>
       </div></div>
     </div>
+    @endcan
+    @can('roles.view')
     <div class="col-sm-6 col-xl-3">
       <div class="card nx-stat nx-stat-2"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-user-shield"></i></span>
-        <div><div class="nx-stat-lbl">Roles</div><div class="nx-stat-num">{{ $count('roles') }}</div></div>
+        <div><div class="nx-stat-lbl">Roles</div><div class="nx-stat-num">{{ $rolesCount }}</div></div>
       </div></div>
     </div>
+    @endcan
+    @can('warehouses.view')
     <div class="col-sm-6 col-xl-3">
       <div class="card nx-stat nx-stat-3"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-warehouse"></i></span>
-        <div><div class="nx-stat-lbl">Warehouses</div><div class="nx-stat-num">{{ $count('warehouses') }}</div></div>
+        <div><div class="nx-stat-lbl">Warehouses</div><div class="nx-stat-num">{{ $warehousesCount }}</div></div>
       </div></div>
     </div>
+    @endcan
+    @can('branches.view')
     <div class="col-sm-6 col-xl-3">
       <div class="card nx-stat nx-stat-4"><div class="card-body">
         <span class="nx-stat-ico"><i class="fas fa-store"></i></span>
-        <div><div class="nx-stat-lbl">Branches</div><div class="nx-stat-num">{{ $count('branches') }}</div></div>
+        <div><div class="nx-stat-lbl">Branches</div><div class="nx-stat-num">{{ $branchesCount }}</div></div>
       </div></div>
     </div>
+    @endcan
   </div>
 
   <div class="row">
@@ -75,6 +76,7 @@
   </div>
 
   <div class="row">
+    @can('users.view')
     <div class="col-12 col-xl-8 d-flex">
       <div class="card flex-fill">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -83,6 +85,7 @@
             <a href="{{ route('admin.users.list') }}" class="btn btn-light btn-sm">View all</a>
           @endcan
         </div>
+        @endcan
         <div class="table-responsive">
           <table class="table table-hover align-middle">
             <thead>

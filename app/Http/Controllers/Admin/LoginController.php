@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Services\LandingService;
 
 class LoginController extends Controller
 {
@@ -79,16 +80,7 @@ class LoginController extends Controller
         RateLimiter::clear($key);
         $request->session()->regenerate(); // prevents session fixation
 
-        // Get the first role of the user
-        $role = $user->roles->first();
-
-        // Role has a valid dashboard route: go there
-        if ($role && $role->dashboard_route && Route::has($role->dashboard_route)) {
-            return redirect()->route($role->dashboard_route);
-        }
-
-        // No role, or the role's route does not exist: fall back to the common dashboard
-        return redirect()->route('admin.dashboard');
+        return app(LandingService::class)->redirect($user);
     }
 
     public function logout(Request $request)
