@@ -9,8 +9,7 @@ use App\Models\Country;
 use App\Models\Warehouse;
 use App\Models\Location;
 use App\Models\State;
-use App\Models\Thana;
-use App\Models\Union;
+use App\Models\Upazila;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -23,21 +22,21 @@ class BranchController extends Controller
         $branches = Branch::accessibleTo(auth()->user())->with('location.country',
         'location.state',
         'location.city',
-        'location.thana',
-        'location.union')->paginate(10);
+        'location.upazila')->paginate(10);
         return view('admin.branch.list', compact('branches'));
     }
 
     //Create
     public function create()
-    {  
+    {
         $countries = Country::all();
         return view('admin.branch.create', compact('countries'));
     }
 
     //Store
-    public function store(Request $request){
-        
+    public function store(Request $request)
+    {
+
         $validation = Validator::make($request->all(), [
             'name' => 'required|max:255',
             'code' => 'required|max:255',
@@ -45,9 +44,7 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
-            'thana_id' => 'required',
-            'union_id' => 'required',
-            'zipcode' => 'required',
+            'upazila_id' => 'required',
             'capacity' => 'required',
             'starting_date' => 'required',
             'status' => 'required|in:active,inactive',
@@ -62,8 +59,7 @@ class BranchController extends Controller
             'country_id' => $request->country_id,
             'state_id' => $request->state_id,
             'city_id' => $request->city_id,
-            'thana_id' => $request->thana_id,
-            'union_id' => $request->union_id,
+            'upazila_id' => $request->upazila_id,
         ])->first();
 
         if(!$location){
@@ -71,9 +67,7 @@ class BranchController extends Controller
                 'country_id' => $request->country_id,
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
-                'thana_id' => $request->thana_id,
-                'union_id' => $request->union_id,
-                'zipcode' => $request->zipcode,
+                'upazila_id' => $request->upazila_id,
             ]);
         }
 
@@ -88,7 +82,7 @@ class BranchController extends Controller
         ]);
 
         return redirect()->route('admin.branch.list')->with('success', 'Branch created successfully');
-       
+
     }
 
     //edit
@@ -108,9 +102,7 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
-            'thana_id' => 'required',
-            'union_id' => 'required',
-            'zipcode' => 'required',
+            'upazila_id' => 'required',
             'capacity' => 'required',
             'starting_date' => 'required',
             'status' => 'required|in:active,inactive',
@@ -118,28 +110,24 @@ class BranchController extends Controller
 
         if($validation->fails()){
             return redirect()->back()->withErrors($validation)->withInput();
-        }
-
-        //find location id
+        }//find location id
         $location = Location::where([
             'country_id' => $request->country_id,
             'state_id' => $request->state_id,
             'city_id' => $request->city_id,
-            'thana_id' => $request->thana_id,
-            'union_id' => $request->union_id,
+            'upazila_id' => $request->upazila_id,
         ])->first();
+
         if(!$location){
             $location = Location::create([
                 'country_id' => $request->country_id,
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
-                'thana_id' => $request->thana_id,
-                'union_id' => $request->union_id,
-                'zipcode' => $request->zipcode,
+                'upazila_id' => $request->upazila_id,
             ]);
         }
 
-        //queary 
+        //queary
         $branch->update([
             'name' => $request->name,
             'code' => $request->code,
@@ -160,7 +148,6 @@ class BranchController extends Controller
         return redirect()->route('admin.branch.list')->with('success', 'Branch deleted successfully');
     }
 
-    
 
 
     // AJAX routes
@@ -174,20 +161,19 @@ class BranchController extends Controller
         return response()->json($state ? $state->cities : []);
     }
 
-    public function getThanas($cityId){
+    public function getUpazilas($cityId){
         $city = City::find($cityId);
-        return response()->json($city ? $city->thanas : []);
+        return response()->json($city ? $city->upazilas : []);
     }
 
     public function getUnions($thanaId){
-        $thana = Thana::with('unions')->find($thanaId);
-        return response()->json($thana ? $thana->unions : []);
+        return response()->json([]);
     }
 
-    public function getZipcode($unionsId){
-        $union = Union::find($unionsId);
+    public function getZipcode($upazilaId){
+        $upazila = Upazila::find($upazilaId);
         return response()->json([
-            'zipcode' => $union->zipcode ?? $union->zip_code ?? ''
+            'zipcode' => $upazila?->postcode ?? ''
         ]);
     }
 

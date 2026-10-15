@@ -101,33 +101,15 @@
           </div>
 
           <div class="col-12 col-md-4">
-            <label class="form-label required" for="thana">Thana</label>
-            <select id="thana" name="thana_id" class="form-select @error('thana_id') is-invalid @enderror" required>
-              @if($branch->location->thana)
-                <option value="{{ $branch->location->thana_id }}">{{ $branch->location->thana->name }}</option>
+            <label class="form-label required" for="upazila">Upazila</label>
+            <select id="upazila" name="upazila_id" class="form-select @error('upazila_id') is-invalid @enderror" required>
+              @if($branch->location->upazila)
+                <option value="{{ $branch->location->upazila_id }}">{{ $branch->location->upazila->name }}</option>
               @else
-                <option value="">-- Select Thana --</option>
+                <option value="">-- Select Upazila --</option>
               @endif
             </select>
-            @error('thana_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-          </div>
-
-          <div class="col-12 col-md-4">
-            <label class="form-label required" for="union">Union</label>
-            <select id="union" name="union_id" class="form-select @error('union_id') is-invalid @enderror" required>
-              @if($branch->location->union)
-                <option value="{{ $branch->location->union_id }}">{{ $branch->location->union->name }}</option>
-              @else
-                <option value="">-- Select Union --</option>
-              @endif
-            </select>
-            @error('union_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-          </div>
-
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="zipcode">Zipcode</label>
-            <input type="text" id="zipcode" name="zipcode" class="form-control"
-                   value="{{ $branch->location->union->zipcode ?? '' }}" readonly>
+            @error('upazila_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-12">
@@ -183,9 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
     countryId: 'country',
     stateId: 'state',
     cityId: 'city',
-    thanaId: 'thana',
-    unionId: 'union',
-    zipcodeId: 'zipcode',
+    upazilaId: 'upazila',
     baseUrl: '{{ url("admin/branch") }}'
   });
 

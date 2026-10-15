@@ -86,20 +86,9 @@
           </div>
 
           <div class="col-12 col-md-4">
-            <label class="form-label required" for="thana">Thana</label>
-            <select id="thana" name="thana_id" class="form-select @error('thana_id') is-invalid @enderror" required></select>
-            @error('thana_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-          </div>
-
-          <div class="col-12 col-md-4">
-            <label class="form-label required" for="union">Union</label>
-            <select id="union" name="union_id" class="form-select @error('union_id') is-invalid @enderror" required></select>
-            @error('union_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-          </div>
-
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="zipcode">Zipcode</label>
-            <input type="text" id="zipcode" name="zipcode" value="{{ old('zipcode') }}" class="form-control" readonly>
+            <label class="form-label required" for="upazila">Upazila</label>
+            <select id="upazila" name="upazila_id" class="form-select @error('upazila_id') is-invalid @enderror" required></select>
+            @error('upazila_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-12">
@@ -157,9 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
     countryId: 'country',
     stateId: 'state',
     cityId: 'city',
-    thanaId: 'thana',
-    unionId: 'union',
-    zipcodeId: 'zipcode',
+    upazilaId: 'upazila',
     baseUrl: '{{ url("admin/warehouse") }}'
   });
 

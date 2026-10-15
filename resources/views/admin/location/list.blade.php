@@ -6,7 +6,7 @@
   <div class="nx-page-head">
     <div>
       <h1 class="nx-title"><small>Administration</small>Locations</h1>
-      <p class="nx-sub">Imported country, state, city, thana and union records</p>
+      <p class="nx-sub">Imported country, state, city and upazila records</p>
     </div>
     @can('locations.create')
       <a href="{{ route('admin.locations.create') }}" class="btn btn-primary">
@@ -23,10 +23,7 @@
           <tr>
             <th scope="col" class="d-none d-lg-table-cell">Country</th>
             <th scope="col" class="d-none d-lg-table-cell">State</th>
-            <th scope="col">City</th>
-            <th scope="col" class="d-none d-md-table-cell">Thana</th>
-            <th scope="col" class="d-none d-lg-table-cell">Union</th>
-            <th scope="col" class="d-none d-md-table-cell">Zip Code</th>
+            <th scope="col">City</th>              <th scope="col" class="d-none d-md-table-cell">Upazila</th>
             <th scope="col">Status</th>
           </tr>
         </thead>
@@ -36,9 +33,7 @@
               <td class="d-none d-lg-table-cell">{{ $location->country->name }}</td>
               <td class="d-none d-lg-table-cell">{{ $location->state->name }}</td>
               <td><div class="nx-user-name">{{ $location->city->name }}</div></td>
-              <td class="d-none d-md-table-cell">{{ $location->thana->name }}</td>
-              <td class="d-none d-lg-table-cell">{{ $location->union->name }}</td>
-              <td class="d-none d-md-table-cell"><span class="nx-code">{{ $location->union->zipcode }}</span></td>
+              <td class="d-none d-md-table-cell">{{ $location->upazila->name }}</td>
 
               <td>
                 <button type="button"
@@ -51,7 +46,7 @@
             </tr>
           @empty
             <tr>
-              <td colspan="7" class="nx-empty">
+              <td colspan="5" class="nx-empty">
                 <i class="fas fa-map-location-dot"></i>
                 <div class="nx-empty-title">No locations found</div>
                 <div class="nx-empty-sub">Import a CSV file to load location data.</div>

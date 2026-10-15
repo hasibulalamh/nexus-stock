@@ -8,8 +8,7 @@ use App\Models\Country;
 use App\Models\State;
 use App\Models\City;
 use App\Models\Location;
-use App\Models\Thana;
-use App\Models\Union;
+use App\Models\Upazila;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\Validator;
 
@@ -20,8 +19,7 @@ class WarehouseController extends Controller
         $warehouses = Warehouse::accessibleTo(auth()->user())->with('location.country',
             'location.state',
             'location.city',
-            'location.thana',
-            'location.union')->paginate(10);
+            'location.upazila')->paginate(10);
         return view('warehouse.list', compact('warehouses'));
     }
 
@@ -31,7 +29,7 @@ class WarehouseController extends Controller
         return view('warehouse.create', compact('countries'));
     }
 
-    //store 
+    //store
     public function store(Request $request){
       $validation= Validator::make($request->all(), [
         'name' => 'required|max:255',
@@ -40,8 +38,7 @@ class WarehouseController extends Controller
         'country_id' => 'required',
         'state_id' => 'required',
         'city_id' => 'required',
-        'thana_id' => 'required',
-        'union_id' => 'required',
+        'upazila_id' => 'required',
         'capacity' => 'required',
         'starting_date' => 'required',
         'status' => 'required|in:active,inactive',
@@ -50,27 +47,25 @@ class WarehouseController extends Controller
         return redirect()->back()->withErrors($validation)->withInput();
       }
 
- //  find an  location id 
-  $location = Location::where([
-    'country_id' => $request->country_id,
-    'state_id'   => $request->state_id,
-    'city_id'    => $request->city_id,
-    'thana_id'   => $request->thana_id,
-    'union_id'   => $request->union_id,
-])->first();
-
-if ($location) {
-    $request->merge(['location_id' => $location->id]);
-} else {
-    $location = Location::create([
+      //  find an  location id
+      $location = Location::where([
         'country_id' => $request->country_id,
         'state_id'   => $request->state_id,
         'city_id'    => $request->city_id,
-        'thana_id'   => $request->thana_id,
-        'union_id'   => $request->union_id,
-    ]);
-    $request->merge(['location_id' => $location->id]);
-}
+        'upazila_id'   => $request->upazila_id,
+      ])->first();
+
+      if ($location) {
+          $request->merge(['location_id' => $location->id]);
+      } else {
+          $location = Location::create([
+              'country_id' => $request->country_id,
+              'state_id'   => $request->state_id,
+              'city_id'    => $request->city_id,
+              'upazila_id'   => $request->upazila_id,
+          ]);
+          $request->merge(['location_id' => $location->id]);
+      }
 
 
       //queary
@@ -78,7 +73,6 @@ if ($location) {
         'name' => $request->name,
         'code' => $request->code,
         'slug' => $request->slug,
-        'country_id' => $request->country_id,
         'location_id' => $location->id,
         'capacity' => $request->capacity,
         'starting_date' => $request->starting_date,
@@ -96,16 +90,14 @@ if ($location) {
 
 
     //update
-    public function update(Request $request, $id){
-        $validation= Validator::make($request->all(), [
+    public function update(Request $request, $id){          $validation= Validator::make($request->all(), [
             'name' => 'required|max:255',
             'code' => 'required|max:255',
             'slug' => 'required|max:255',
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
-            'thana_id' => 'required',
-            'union_id' => 'required',
+            'upazila_id' => 'required',
             'capacity' => 'required',
             'starting_date' => 'required',
             'status' => 'required|in:active,inactive',
@@ -114,30 +106,29 @@ if ($location) {
             return redirect()->back()->withErrors($validation)->withInput();
           }
 
-  //  find an  location id 
-   $location = Location::where([
-     'country_id' => $request->country_id,
-     'state_id'   => $request->state_id,
-     'city_id'    => $request->city_id,
-     'thana_id'   => $request->thana_id,
-     'union_id'   => $request->union_id,
-   ])->first();
+      //  find an  location id
+       $location = Location::where([
+         'country_id' => $request->country_id,
+         'state_id'   => $request->state_id,
+         'city_id'    => $request->city_id,
+         'upazila_id'   => $request->upazila_id,
+       ])->first();
 
-   if ($location) {
-       $request->merge(['location_id' => $location->id]);
-   } else {
-       $location = Location::create([
-           'country_id' => $request->country_id,
-           'state_id'   => $request->state_id,
-           'city_id'    => $request->city_id,
-           'thana_id'   => $request->thana_id,
-           'union_id'   => $request->union_id,
-       ]);
-       $request->merge(['location_id' => $location->id]);
-   }
+       if ($location) {
+           $request->merge(['location_id' => $location->id]);
+       } else {
+           $location = Location::create([
+               'country_id' => $request->country_id,
+               'state_id'   => $request->state_id,
+               'city_id'    => $request->city_id,
+               'upazila_id'   => $request->upazila_id,
+           ]);
+           $request->merge(['location_id' => $location->id]);
+       }
 
 
-     //queary          $warehouse = Warehouse::accessibleTo(auth()->user())->findOrFail($id);
+       //queary
+          $warehouse = Warehouse::accessibleTo(auth()->user())->findOrFail($id);
           $warehouse->update([
        'name' => $request->name,
        'code' => $request->code,
@@ -169,20 +160,19 @@ if ($location) {
         return response()->json($state ? $state->cities : []);
     }
 
-    public function getThanas($cityId){
+    public function getUpazilas($cityId){
         $city = City::find($cityId);
-        return response()->json($city ? $city->thanas : []);
+        return response()->json($city ? $city->upazilas : []);
     }
 
     public function getUnions($thanaId){
-        $thana = Thana::with('unions')->find($thanaId);
-        return response()->json($thana ? $thana->unions : []);
+        return response()->json([]);
     }
 
-    public function getZipcode($unionsId){
-        $union = Union::find($unionsId);
+    public function getZipcode($upazilaId){
+        $upazila = Upazila::find($upazilaId);
         return response()->json([
-            'zipcode' => $union->zipcode ?? $union->zip_code ?? ''
+            'zipcode' => $upazila?->postcode ?? ''
         ]);
     }
 

@@ -10,11 +10,9 @@ class Location extends Model
         'country_id',
         'state_id',
         'city_id',
-        'thana_id',
-        'union_id',
+        'upazila_id',
         'status',
-    ];
-    //Relationship
+    ];    //Relationship
     public function country()
     {
         return $this->belongsTo(Country::class);
@@ -27,13 +25,14 @@ class Location extends Model
     {
         return $this->belongsTo(City::class);
     }
+    public function upazila()
+    {
+        return $this->belongsTo(Upazila::class);
+    }
+
     public function thana()
     {
-        return $this->belongsTo(Thana::class);
-    }
-    public function union()
-    {
-        return $this->belongsTo(Union::class);
+        return $this->upazila();
     }
     public function warehouse()
     {

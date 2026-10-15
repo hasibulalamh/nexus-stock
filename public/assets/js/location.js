@@ -4,11 +4,8 @@ class LocationSelector {
         this.countryId = config.countryId;
         this.stateId = config.stateId;
         this.cityId = config.cityId;
-        this.thanaId = config.thanaId;
-        this.unionId = config.unionId;
-        this.zipcodeId = config.zipcodeId;
+        this.upazilaId = config.upazilaId;
         this.baseUrl = config.baseUrl || '/admin/warehouse';
-        this.baseUrl = config.baseUrl || '/admin/branch';
         this.init();
     }
 
@@ -22,22 +19,19 @@ class LocationSelector {
         const country = document.getElementById(this.countryId);
         const state = document.getElementById(this.stateId);
         const city = document.getElementById(this.cityId);
-        const thana = document.getElementById(this.thanaId);
-        const union = document.getElementById(this.unionId);
-        const zipcode = document.getElementById(this.zipcodeId);
+        const upazila = document.getElementById(this.upazilaId);
 
-        if (!country || !state || !city) return;
+        if (!country || !state || !city || !upazila) return;
 
-        country.addEventListener('change', () => this.loadStates(country.value, state, city, thana, union, zipcode));
-        state.addEventListener('change', () => this.loadCities(state.value, city, thana, union, zipcode));
-        city.addEventListener('change', () => this.loadThanas(city.value, thana, union, zipcode));
-        thana.addEventListener('change', () => this.loadUnions(thana.value, union, zipcode));
-        union.addEventListener('change', () => this.loadZipcode(union.value, zipcode));
+        country.addEventListener('change', () => this.loadStates(country.value, state, city, upazila));
+        state.addEventListener('change', () => this.loadCities(state.value, city, upazila));
+        city.addEventListener('change', () => this.loadUpazilas(city.value, upazila));
+        upazila.addEventListener('change', () => this.loadZipcode(upazila.value));
     }
 
     // Load states
-    async loadStates(countryId, state, city, thana, union, zipcode) {
-        this.reset([state, city, thana, union], zipcode);
+    async loadStates(countryId, state, city, upazila) {
+        this.reset([state, city, upazila]);
         if (!countryId) return;
         const res = await fetch(`${this.baseUrl}/get-states/${countryId}`);
         const data = await res.json();
@@ -45,48 +39,45 @@ class LocationSelector {
     }
 
     // Load cities
-    async loadCities(stateId, city, thana, union, zipcode) {
-        this.reset([city, thana, union], zipcode);
+    async loadCities(stateId, city, upazila) {
+        this.reset([city, upazila]);
         if (!stateId) return;
         const res = await fetch(`${this.baseUrl}/get-cities/${stateId}`);
         const data = await res.json();
         data.forEach(d => city.innerHTML += `<option value="${d.id}">${d.name}</option>`);
     }
 
-    // Load thanas
-    async loadThanas(cityId, thana, union, zipcode) {
-        this.reset([thana, union], zipcode);
+    // Load upazilas
+    async loadUpazilas(cityId, upazila) {
+        this.reset([upazila]);
         if (!cityId) return;
-        const res = await fetch(`${this.baseUrl}/get-thanas/${cityId}`);
+        const res = await fetch(`${this.baseUrl}/get-upazilas/${cityId}`);
         const data = await res.json();
-        data.forEach(d => thana.innerHTML += `<option value="${d.id}">${d.name}</option>`);
+        data.forEach(d => upazila.innerHTML += `<option value="${d.id}">${d.name}</option>`);
     }
 
-    // Load unions
-    async loadUnions(thanaId, union, zipcode) {
-        this.reset([union], zipcode);
-        if (!thanaId) return;
-        const res = await fetch(`${this.baseUrl}/get-unions/${thanaId}`);
+    // Load upazila-based zipcode placeholder
+    async loadZipcode(upazilaId) {
+        const zipcodeEl = document.getElementById('zipcode');
+        if (!zipcodeEl) return;
+        zipcodeEl.value = '';
+        if (!upazilaId) return;
+        const res = await fetch(`${this.baseUrl}/get-zipcode/${upazilaId}`);
         const data = await res.json();
-        data.forEach(d => union.innerHTML += `<option value="${d.id}">${d.name}</option>`);
-    }
-
-    // Load zipcode
-    async loadZipcode(unionId, zipcode) {
-        zipcode.value = '';
-        if (!unionId) return;
-        const res = await fetch(`${this.baseUrl}/get-zipcode/${unionId}`);
-        const data = await res.json();
-        zipcode.value = data.zipcode || '';
+        zipcodeEl.value = data.zipcode || '';
     }
 
     // Reset
-    reset(selects, zipcode) {
+    reset(selects) {
         selects.forEach(sel => sel.innerHTML = '<option value="">--Select--</option>');
-        if (zipcode) zipcode.value = '';
     }
 }
 
+// upazila select id updated from 'thana' to 'upazila'
 function initLocationSelector(config) {
+    // Rename thanaId to upazilaId if present in legacy config
+    if (config.thanaId && !config.upazilaId) {
+        config.upazilaId = config.thanaId;
+    }
     return new LocationSelector(config);
 }

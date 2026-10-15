@@ -48,8 +48,7 @@
                   {{ $warehouse->location->country->name ?? '-' }},
                   {{ $warehouse->location->state->name ?? '-' }},
                   {{ $warehouse->location->city->name ?? '-' }},
-                  {{ $warehouse->location->thana->name ?? '-' }},
-                  {{ $warehouse->location->union->name ?? '-' }}
+                  {{ $warehouse->location->upazila->name ?? '-' }}
                 </span>
               </td>
 
