@@ -37,23 +37,20 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label required" for="warehouse_name">Warehouse Name</label>
-            <input type="text" id="warehouse_name" name="name" value="{{ old('name') }}"
-                   class="form-control @error('name') is-invalid @enderror"
+            <input type="text" id="warehouse_name" name="name" value="{{ old('name') }}"                   class="form-control @error('name') is-invalid @enderror"
                    placeholder="Enter warehouse name" required>
             @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label required" for="warehouse_code">Warehouse Code</label>
-            <input type="text" id="warehouse_code" name="code" value="{{ old('code') }}"
-                   class="form-control @error('code') is-invalid @enderror" readonly required>
+            <input type="text" id="warehouse_code" name="code" value="{{ old('code') }}"                   class="form-control @error('code') is-invalid @enderror" readonly required>
             @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="warehouse_slug">Slug</label>
-            <input type="text" id="warehouse_slug" name="slug" value="{{ old('slug') }}"
-                   class="form-control @error('slug') is-invalid @enderror" readonly>
+            <input type="text" id="warehouse_slug" name="slug" value="{{ old('slug') }}"                   class="form-control @error('slug') is-invalid @enderror" readonly>
             @error('slug')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
@@ -98,16 +95,14 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label required" for="capacity">Capacity</label>
-            <input type="number" id="capacity" name="capacity" value="{{ old('capacity') }}"
-                   class="form-control @error('capacity') is-invalid @enderror"
+            <input type="number" id="capacity" name="capacity" value="{{ old('capacity') }}"                   class="form-control @error('capacity') is-invalid @enderror"
                    placeholder="Enter capacity" required>
             @error('capacity')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label required" for="starting_date">Opening Date</label>
-            <input type="date" id="starting_date" name="starting_date" value="{{ old('starting_date') }}"
-                   class="form-control @error('starting_date') is-invalid @enderror" required>
+            <input type="date" id="starting_date" name="starting_date" value="{{ old('starting_date') }}"                   class="form-control @error('starting_date') is-invalid @enderror" required>
             @error('starting_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
@@ -118,6 +113,19 @@
               <option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
             </select>
             @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="branch">Branch</label>
+            <select id="branch" name="branch_id" class="form-select @error('branch_id') is-invalid @enderror">
+              <option value="">-- Select Branch --</option>
+              @foreach($branches as $branch)
+                <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                  {{ $branch->name }}
+                </option>
+              @endforeach
+            </select>
+            @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
         </div>
@@ -158,6 +166,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('warehouse_slug').value = name.toLowerCase().replace(/\s+/g, '-');
   });
 
+  // Initialize branch select
+  const branchSelect = document.getElementById('branch');
+  // Optionally pre-select a branch if needed
 });
 </script>
 @endsection

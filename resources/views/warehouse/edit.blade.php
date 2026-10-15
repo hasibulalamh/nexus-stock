@@ -39,22 +39,19 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label required" for="warehouse_name">Warehouse Name</label>
-            <input type="text" id="warehouse_name" name="name" value="{{ old('name', $warehouse->name) }}"
-                   class="form-control @error('name') is-invalid @enderror" required>
+            <input type="text" id="warehouse_name" name="name" value="{{ old('name', $warehouse->name) }}"                   class="form-control @error('name') is-invalid @enderror" required>
             @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label required" for="warehouse_code">Warehouse Code</label>
-            <input type="text" id="warehouse_code" name="code" value="{{ old('code', $warehouse->code) }}"
-                   class="form-control @error('code') is-invalid @enderror" readonly required>
+            <input type="text" id="warehouse_code" name="code" value="{{ old('code', $warehouse->code) }}"                   class="form-control @error('code') is-invalid @enderror" readonly required>
             @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="warehouse_slug">Slug</label>
-            <input type="text" id="warehouse_slug" name="slug" value="{{ old('slug', $warehouse->slug) }}"
-                   class="form-control @error('slug') is-invalid @enderror" readonly>
+            <input type="text" id="warehouse_slug" name="slug" value="{{ old('slug', $warehouse->slug) }}"                   class="form-control @error('slug') is-invalid @enderror" readonly>
             @error('slug')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
@@ -68,7 +65,7 @@
             <select id="country" name="country_id" class="form-select @error('country_id') is-invalid @enderror" required>
               <option value="">-- Select Country --</option>
               @foreach($countries as $country)
-                <option value="{{ $country->id }}" @selected(old('country_id', $warehouse->location->country_id) == $country->id)>
+                <option value="{{ $country->id }}" @selected(old('country_id', $warehouse->location->country_id) == $country->id)
                   {{ $country->name }}
                 </option>
               @endforeach
@@ -119,8 +116,7 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label required" for="capacity">Capacity</label>
-            <input type="number" id="capacity" name="capacity" value="{{ old('capacity', $warehouse->capacity) }}"
-                   class="form-control @error('capacity') is-invalid @enderror" required>
+            <input type="number" id="capacity" name="capacity" value="{{ old('capacity', $warehouse->capacity) }}"                   class="form-control @error('capacity') is-invalid @enderror" required>
             @error('capacity')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
@@ -139,6 +135,20 @@
               <option value="inactive" @selected(old('status', $warehouse->status) == 'inactive')>Inactive</option>
             </select>
             @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="branch">Branch</label>
+            <select id="branch" name="branch_id" class="form-select @error('branch_id') is-invalid @enderror">
+              <option value="">-- Select Branch --</option>
+              @foreach($branches as $branch)
+                <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}
+                  {{ $warehouse->branch_id == $branch->id ? 'data-selected' : '' }}>
+                  {{ $branch->name }}
+                </option>
+              @endforeach
+            </select>
+            @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
         </div>
@@ -176,6 +186,21 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('warehouse_code').value = name.toUpperCase().replace(/\s+/g, '_').substring(0, 10);
     document.getElementById('warehouse_slug').value = name.toLowerCase().replace(/\s+/g, '-');
   });
+
+  // Initialize branch select
+  const branchSelect = document.getElementById('branch');
+  // Optionally pre-select the warehouse's branch
+  const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
+  // Highlight the currently selected branch
+  {% if $warehouse->branch_id %}
+    // Set the selected option to match the warehouse's branch
+    for (let i = 0; i < branchSelect.options.length; i++) {
+      if (branchSelect.options[i].value == {{ $warehouse->branch_id }}) {
+        branchSelect.selectedIndex = i;
+        break;
+      }
+    }
+  {% endif %}
 });
 </script>
 @endsection

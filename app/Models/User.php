@@ -15,8 +15,9 @@ use App\Models\Warehouse;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles, SoftDeletes;
+
 
     /**
      * The attributes that are mass assignable.
@@ -24,20 +25,21 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-       'full_name',
-       'email',
-       'password',
-       'phone',
+        'full_name',
+        'email',
+        'password',
+        'phone',
         'gender',
-       'employee_id',
-       'department_id',
-       'designation_id',
-       'role_id',
-       'join_date',
-       'profile_photo',
-       'status',
-       'access_all',
+        'employee_id',
+        'department_id',
+        'designation_id',
+        'role_id',
+        'join_date',
+        'profile_photo',
+        'status',
+        'access_all',
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -49,30 +51,29 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+
     /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
      */
-   protected $casts = [
-    'email_verified_at' => 'datetime',
-    'password' => 'hashed',
-];
-
-
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
 
 
     //many to many
-   public function designation()
-   {
-       return $this->belongsTo(Designation::class);
-   }
+    public function designation()
+    {
+        return $this->belongsTo(Designation::class);
+    }
 
-   //many to many
-   public function department()
-   {
-       return $this->belongsTo(Department::class);
-   }
+    //many to many
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
 
     public function warehouses()
     {
@@ -89,11 +90,11 @@ class User extends Authenticatable
      * - A superadmin, or any user with access_all = true, sees everything
      *   (these helpers then return null = unrestricted).
      * - Otherwise the assigned ids are returned (an empty array = no access).
-     * - Warehouses do NOT belong to branches (there is no branch_id column on
-     *   warehouses), so branch assignments never imply warehouse access;
-     *   warehouses must be assigned directly.
+     * - A user with access to a branch also gets the warehouses whose branch_id
+     *   is that branch, in addition to directly assigned warehouses (union, unique).
+     * - access_all users and superadmin keep seeing everything.
      *
-     * @return array<int>|null null means "all access"
+     * @return array<int>|null null means "all access", empty array means "no access"
      */
     public function hasAccessAll(): bool
     {
@@ -110,14 +111,31 @@ class User extends Authenticatable
         return $this->branches()->pluck('branches.id')->all();
     }
 
-    /** @return array<int>|null null means "all access" */
+    /**
+     * Restrict a query to the warehouses the given user may access.
+     * - null means "all access" (superadmin / access_all)
+     * - empty array means "no access" (user has no assignments)
+     */
     public function accessibleWarehouseIds(): ?array
     {
         if ($this->hasAccessAll()) {
             return null;
         }
 
-        return $this->warehouses()->pluck('warehouses.id')->all();
+        // Directly assigned warehouses
+        $directIds = $this->warehouses()->pluck('warehouses.id')->all();
+
+        // Warehouses assigned via the user's branches (via branch_id on warehouses)
+        $branchWarehouseIds = [];
+        foreach ($this->branches as $branch) {
+            $branchWare = Warehouse::where('branch_id', $branch->id)->pluck('id')->all();
+            $branchWarehouseIds = array_merge($branchWarehouseIds, $branchWare);
+        }
+
+        // Union of direct and branch-assigned warehouses, unique
+        $allIds = array_unique(array_merge($directIds, $branchWarehouseIds));
+
+        return $allIds;  // Return empty array if no ids (means no access)
     }
 
     public function role(){
@@ -133,6 +151,9 @@ class User extends Authenticatable
 
         return asset('assets/img/avatars/avatar.jpg');
     }
+
+
+
 
 
 }
