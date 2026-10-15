@@ -27,7 +27,7 @@ class StartupAndRoutesTest extends TestCase
     public function test_application_bootstraps(): void
     {
         $this->assertNotEmpty(config('app.name'));
-        $this->assertEquals('local', config('app.env'));
+        $this->assertEquals('testing', config('app.env'));
     }
 
     /**

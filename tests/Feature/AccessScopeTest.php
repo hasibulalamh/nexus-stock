@@ -151,7 +151,7 @@ class AccessScopeTest extends TestCase
         $this->makeWarehouse('Alpha Depot');
         $unassigned = $this->makeWarehouse('Beta Depot');
 
-        $user = $this->makeUser('staff', [], ['warehouses.view']);
+        $user = $this->makeUser('staff', [], ['warehouses.view', 'warehouses.edit']);
 
         $this->actingAs($user)
             ->delete(route('admin.warehouse.delete', $unassigned->id))
@@ -255,5 +255,34 @@ class AccessScopeTest extends TestCase
         $this->actingAs($user)->get(route('admin.branch.list'))
             ->assertOk()
             ->assertDontSee('Alpha Branch');
+    }
+
+    public function test_branch_assignment_grants_access_to_warehouses_on_that_branch(): void
+    {
+        $branch = $this->makeBranch('Assigned Branch');
+        $otherBranch = $this->makeBranch('Other Branch');
+        $assignedWarehouse = $this->makeWarehouse('Assigned Depot');
+        $assignedWarehouse->update(['branch_id' => $branch->id]);
+        $otherWarehouse = $this->makeWarehouse('Other Depot');
+        $otherWarehouse->update(['branch_id' => $otherBranch->id]);
+        $directWarehouse = $this->makeWarehouse('Direct Depot');
+
+        $user = $this->makeUser('staff', [], ['warehouses.view', 'warehouses.edit']);
+        $user->branches()->attach($branch->id);
+        $user->warehouses()->attach($directWarehouse->id);
+
+        $this->assertEqualsCanonicalizing(
+            [$assignedWarehouse->id, $directWarehouse->id],
+            $user->accessibleWarehouseIds()
+        );
+        $this->actingAs($user)->get(route('admin.warehouse.edit', $assignedWarehouse->id))
+            ->assertOk();
+        $this->actingAs($user)->get(route('admin.warehouse.edit', $otherWarehouse->id))
+            ->assertNotFound();
+        $this->actingAs($user)->get(route('admin.warehouse.edit', $directWarehouse->id))
+            ->assertOk();
+
+        $user->update(['access_all' => true]);
+        $this->assertNull($user->fresh()->accessibleWarehouseIds());
     }
 }

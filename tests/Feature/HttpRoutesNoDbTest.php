@@ -2,15 +2,17 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * HTTP-level tests that don't require database.
- * Use APP_KEY set to avoid encryption issues; use array session/cache from phpunit.xml.
- * Do NOT use RefreshDatabase because SQLite driver is unavailable.
+ * HTTP-level route tests. Login POST requests query the users table, so the
+ * in-memory test database is migrated for this class.
  */
 class HttpRoutesNoDbTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * TEST-061: GET /login returns 200 with login view (no DB needed for guest GET)
      */

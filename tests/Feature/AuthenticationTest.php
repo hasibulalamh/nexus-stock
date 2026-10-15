@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Department;
 use App\Models\Designation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -154,5 +155,22 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('login'));
         $response->assertSessionHasErrors('email');
         $this->assertGuest();
+    }
+
+    public function test_post_without_csrf_token_is_rejected_when_csrf_is_enabled(): void
+    {
+        $this->app->instance('env', 'local');
+
+        try {
+            $response = $this->withMiddleware(ValidateCsrfToken::class)
+                ->post(route('login.submit'), [
+                    'email' => 'nobody@example.com',
+                    'password' => '12345678',
+                ]);
+
+            $response->assertStatus(419);
+        } finally {
+            $this->app->instance('env', 'testing');
+        }
     }
 }

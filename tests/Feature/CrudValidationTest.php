@@ -208,6 +208,36 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('password');
     }
 
+    public function test_user_edit_is_available_when_branch_and_warehouse_are_assigned(): void
+    {
+        $branch = \App\Models\Branch::create([
+            'name' => 'Edit Branch',
+            'code' => 'EDIT-BRANCH',
+            'slug' => 'edit-branch',
+            'location_id' => 1,
+            'status' => 'active',
+            'capacity' => '100',
+            'starting_date' => '2026-01-01',
+        ]);
+        $warehouse = \App\Models\Warehouse::create([
+            'name' => 'Edit Warehouse',
+            'code' => 'EDIT-WAREHOUSE',
+            'slug' => 'edit-warehouse',
+            'location_id' => 1,
+            'branch_id' => $branch->id,
+            'status' => 'active',
+            'capacity' => '100',
+            'starting_date' => '2026-01-01',
+        ]);
+
+        $this->admin->branches()->attach($branch->id);
+        $this->admin->warehouses()->attach($warehouse->id);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.users.edit', $this->admin->id))
+            ->assertOk();
+    }
+
     /** TEST-030 */
     #[Test]
     public function user_store_validation_phone_11_digits(): void
