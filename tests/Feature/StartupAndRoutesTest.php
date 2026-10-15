@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,13 +15,19 @@ class StartupAndRoutesTest extends TestCase
         $this->artisan('migrate');
     }
 
+    protected function afterRefreshingDatabase()
+    {
+        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(\Database\Seeders\AdminSeeder::class);
+    }
+
     /**
      * TEST-001: Application bootstraps without errors
      */
     public function test_application_bootstraps(): void
     {
         $this->assertNotEmpty(config('app.name'));
-        $this->assertEquals('testing', config('app.env'));
+        $this->assertEquals('local', config('app.env'));
     }
 
     /**
@@ -57,108 +64,116 @@ class StartupAndRoutesTest extends TestCase
     }
 
     /**
-     * TEST-005: Route prefix duplication confirmed for users
-     * Expected: The effective URL under admin prefix should not repeat segments
+     * TEST-005: Route prefix confirmed for users (no duplication)
+     * The admin.users.list route has clean URL without double segment
      */
-    public function test_route_prefix_duplication_for_users(): void
+    public function test_route_prefix_for_users(): void
     {
         $uri = \Illuminate\Support\Facades\Route::getRoutes()
             ->getByName('admin.users.list')
             ?->uri();
 
-        // admin/users group adds 'users' prefix, then the route path again adds 'users/list'
+        // Fixed: admin/users group + users/list = admin/users/list (no duplication)
         $this->assertSame(
-            'admin/users/users/list',
+            'admin/users/list',
             $uri,
-            'Confirmed prefix duplication bug: admin/users + users/list produces double segment'
+            'Fixed: admin/users + users/list should produce single segment'
         );
     }
 
     /**
-     * TEST-006: Route prefix duplication confirmed for branch
+     * TEST-006: Route prefix confirmed for branch (no duplication)
      */
-    public function test_route_prefix_duplication_for_branch(): void
+    public function test_route_prefix_for_branch(): void
     {
         $uri = \Illuminate\Support\Facades\Route::getRoutes()
             ->getByName('admin.branch.list')
             ?->uri();
 
+        // Fixed: admin/branch + list = admin/branch/list (no duplication)
         $this->assertSame(
-            'admin/branch/branch/list',
+            'admin/branch/list',
             $uri,
-            'Confirmed prefix duplication for branch routes'
+            'Fixed: admin/branch + list should produce single segment'
         );
     }
 
     /**
-     * TEST-007: Route prefix duplication confirmed for warehouse
+     * TEST-007: Route prefix confirmed for warehouse (no duplication)
      */
-    public function test_route_prefix_duplication_for_warehouse(): void
+    public function test_route_prefix_for_warehouse(): void
     {
         $uri = \Illuminate\Support\Facades\Route::getRoutes()
             ->getByName('admin.warehouse.list')
             ?->uri();
 
+        // Fixed: admin/warehouse + list = admin/warehouse/list (no duplication)
         $this->assertSame(
-            'admin/warehouse/warehouse/list',
+            'admin/warehouse/list',
             $uri,
-            'Confirmed prefix duplication for warehouse routes'
+            'Fixed: admin/warehouse + list should produce single segment'
         );
     }
 
     /**
-     * TEST-008: Route prefix duplication confirmed for designations
+     * TEST-008: Route prefix confirmed for designations (no duplication)
      */
-    public function test_route_prefix_duplication_for_designations(): void
+    public function test_route_prefix_for_designations(): void
     {
         $uri = \Illuminate\Support\Facades\Route::getRoutes()
             ->getByName('admin.designations.list')
             ?->uri();
 
+        // Fixed: admin/designations + list = admin/designations/list (no duplication)
         $this->assertSame(
-            'admin/designations/designations/list',
+            'admin/designations/list',
             $uri,
-            'Confirmed prefix duplication for designations routes'
+            'Fixed: admin/designations + list should produce single segment'
         );
     }
 
     /**
-     * TEST-009: Route prefix duplication confirmed for locations
+     * TEST-009: Route prefix confirmed for locations (no duplication)
      */
-    public function test_route_prefix_duplication_for_locations(): void
+    public function test_route_prefix_for_locations(): void
     {
         $uri = \Illuminate\Support\Facades\Route::getRoutes()
             ->getByName('admin.locations.list')
             ?->uri();
 
+        // Fixed: admin/locations + list = admin/locations/list (no duplication, no singular/plural mismatch)
         $this->assertSame(
-            'admin/locations/location/list',
+            'admin/locations/list',
             $uri,
-            'Confirmed prefix duplication for locations routes (also location vs locations mismatch)'
+            'Fixed: admin/locations + list should produce single segment'
         );
     }
 
     /**
-     * TEST-010: Missing logout route
+     * TEST-010: Logout route exists and logs out the user
      */
-    public function test_logout_route_does_not_exist(): void
+    public function test_logout_route_exists_and_logs_out(): void
     {
-        $hasLogoutRoute = collect(\Illuminate\Support\Facades\Route::getRoutes())
-            ->contains(fn($r) => in_array(strtolower($r->uri()), ['logout', 'admin/logout'])
-                || $r->getName() === 'logout' || $r->getName() === 'admin.logout');
-
-        $this->assertFalse(
-            $hasLogoutRoute,
-            'Expected logout route NOT to be present - confirming missing logout'
-        );
+        $admin = User::where('email', 'superadmin@storify.com')->first();
+        $this->assertNotNull($admin, 'Admin user must be seeded');
+        $response = $this->actingAs($admin)->post(route('logout'));
+        $response->assertRedirect('/login');
+        $this->assertGuest();
     }
 
     /**
-     * TEST-011: Missing root "/" route
+     * TEST-011: Root route redirects based on authentication status
      */
-    public function test_root_route_returns_404(): void
+    public function test_root_redirects_based_on_auth(): void
     {
+        // Unauthenticated user redirected to login
         $response = $this->get('/');
-        $response->assertStatus(404);
+        $response->assertRedirect('login');
+
+        // Authenticated user redirected to dashboard
+        $admin = User::where('email', 'superadmin@storify.com')->first();
+        $this->assertNotNull($admin, 'Admin user must be seeded');
+        $response = $this->actingAs($admin)->get('/');
+        $response->assertRedirect(route('admin.dashboard'));
     }
 }

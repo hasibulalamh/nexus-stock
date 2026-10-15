@@ -8,7 +8,6 @@ use App\Models\Department;
 use App\Models\Designation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Hash;
 
 class CrudValidationTest extends TestCase
 {
@@ -18,7 +17,11 @@ class CrudValidationTest extends TestCase
 
     protected function afterRefreshingDatabase()
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        // Only seed permission seeder + roles/users the tests create.
+        // BangladeshLocationSeeder is omitted to avoid UniqueConstraintViolationException.
+        // Also seed admin user so CRUD tests can find it.
+        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(\Database\Seeders\AdminSeeder::class);
         $this->admin = User::where('email', 'superadmin@storify.com')->firstOrFail();
     }
 
@@ -31,6 +34,7 @@ class CrudValidationTest extends TestCase
             'name' => 'Test Department',
             'code' => 'TST-DEP-001',
             'status' => 'active',
+            'join_date' => '2026-01-01',
         ];
 
         $response = $this->actingAs($this->admin)->post(
@@ -245,37 +249,31 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('gender');
     }
 
-    /** @test TEST-032 - Confirm User edit method missing */
-    public function user_edit_route_returns_500_because_method_missing(): void
+    /** @test TEST-032 - User edit method now exists and works */
+    public function user_edit_route_with_valid_user_id_returns_200(): void
     {
-        $this->withoutExceptionHandling();
+        $response = $this->actingAs($this->admin)->get(route('admin.users.edit', $this->admin->id));
 
-        try {
-            $response = $this->actingAs($this->admin)->get(route('admin.users.edit', 1));
-            $status = $response->getStatusCode();
-        } catch (\BadMethodCallException | \ReflectionException $e) {
-            $this->assertTrue(true, 'Confirmed method does not exist: '.$e->getMessage());
-            return;
-        }
+        $response->assertStatus(200);
+        $response->assertViewIs('admin.user.edit');
+    }
 
-        $this->assertNotEquals(200, $status, 'Expected failure because UserController has no edit method');
+    /** @test TEST-032b - User edit method returns 404 for non-existent user */
+    public function user_edit_route_with_invalid_user_id_returns_404(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('admin.users.edit', 99999));
+
+        $response->assertNotFound();
     }
 
     // ========================= BRANCH getManagers METHOD =========================
 
     /** @test TEST-033 */
-    public function branch_getmanagers_route_returns_500_as_method_is_undefined(): void
+    public function branch_getmanagers_route_returns_404_as_route_not_defined(): void
     {
-        $this->withoutExceptionHandling();
+        $response = $this->actingAs($this->admin)->get('/admin/branch/get-managers/1');
 
-        try {
-            $response = $this->actingAs($this->admin)->get('/admin/branch/get-managers/1');
-            $status = $response->getStatusCode();
-        } catch (\BadMethodCallException $e) {
-            $this->assertTrue(true, 'getManagers method not defined - confirmed bug');
-            return;
-        }
-
-        $this->assertNotEquals(200, $status);
+        // Route doesn't exist (removed), so returns 404
+        $response->assertNotFound();
     }
 }

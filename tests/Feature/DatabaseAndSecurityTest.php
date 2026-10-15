@@ -13,7 +13,9 @@ class DatabaseAndSecurityTest extends TestCase
 
     protected function afterRefreshingDatabase()
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        // Seed necessary data for tests
+        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(\Database\Seeders\AdminSeeder::class);
     }
 
     /**
@@ -23,9 +25,9 @@ class DatabaseAndSecurityTest extends TestCase
     public function test_warehouse_location_id_uses_string_type_not_foreign_key(): void
     {
         $columns = Schema::getColumnType('warehouses', 'location_id');
-        // Confirmed bug: migration declares string, not unsignedBigInteger foreign key
-        $this->assertEquals('string', $columns,
-            'Bug confirmed: warehouses.location_id is string, expected bigint (FK)');
+        // SQLite reports 'varchar' for string columns; MySQL reports 'string'
+        $this->assertContains($columns, ['string', 'varchar'],
+            'Bug confirmed: warehouses.location_id is string/varchar, expected bigint (FK)');
     }
 
     /**
@@ -47,7 +49,7 @@ class DatabaseAndSecurityTest extends TestCase
         \Illuminate\Support\Facades\DB::table('roles')->where('id', $roleId)->delete();
 
         // Because users.role_id has constrained()->cascadeOnDelete(), user is GONE.
-        $this->assertDatabaseMissing('users', ['id' => $user->id],
+        $this->assertFalse(User::where('id', $user->id)->exists(),
             'Bug confirmed: deleting a role CASCADE-DELETES the associated user');
     }
 
@@ -99,17 +101,23 @@ class DatabaseAndSecurityTest extends TestCase
     }
 
     /**
-     * TEST-040: Role permissions middleware: ALL admin routes ONLY check 'auth', not any 'can' or 'role' middleware
-     * Any logged in user (regardless of permissions) can access any admin page.
+     * TEST-040: Role permissions middleware: admin routes now check 'can:' middleware
+     * (fixed from previous state where only 'auth' was checked).
      * Verified by inspecting web.php route group.
      */
-    public function test_no_authorization_middleware_on_admin_routes(): void
+    public function test_authorization_middleware_on_admin_routes(): void
     {
         $routes = collect(\Illuminate\Support\Facades\Route::getRoutes())
             ->filter(fn ($r) => str_starts_with($r->uri(), 'admin/'))
             ->values();
 
         $this->assertNotEmpty($routes);
+
+        // Dashboard is intentionally open to any authenticated user;
+        // every other admin route must have a permission gate.
+        $exemptUris = ['admin/dashboard'];
+
+        $routesWithoutPermission = [];
 
         foreach ($routes as $route) {
             $middleware = $route->middleware();
@@ -123,43 +131,37 @@ class DatabaseAndSecurityTest extends TestCase
             );
 
             $this->assertTrue($hasAuth, "Admin route {$route->uri()} must have auth");
-            // Confirmed missing authorization: NO role/permission middleware on ANY admin route
-            $this->assertFalse($hasPermissionOrRole,
-                "Confirmed missing authorization: {$route->uri()} has no role/permission gate");
+
+            if (!in_array($route->uri(), $exemptUris) && !$hasPermissionOrRole) {
+                $routesWithoutPermission[] = $route->uri();
+            }
         }
+
+        // Confirmed fixed: only the dashboard is exempt; all other admin routes now have role/permission gates
+        $this->assertEmpty($routesWithoutPermission,
+            'Fixed: admin routes without permission gates: ' . implode(', ', $routesWithoutPermission));
     }
 
     /**
-     * TEST-041: Warehouse delete has no findOrFail guard - passing nonexistent id gives error
+     * TEST-041: Warehouse delete uses findOrFail guard - passing nonexistent id gives 404
      */
-    public function test_warehouse_delete_with_nonexistent_id_errors(): void
+    public function test_warehouse_delete_with_nonexistent_id_returns_404(): void
     {
-        $admin = User::firstOrFail();
-        $this->withoutExceptionHandling();
+        $admin = User::where('email', 'superadmin@storify.com')->firstOrFail();
 
-        try {
-            $this->actingAs($admin)->delete(route('admin.warehouse.delete', 99999));
-            $this->fail('Expected exception from Warehouse::find(99999)->delete()');
-        } catch (\Error $e) {
-            // Call to a member function delete() on null
-            $this->assertStringContainsStringIgnoringCase('null', strtolower($e->getMessage()),
-                'Bug: warehouse delete uses find() instead of findOrFail()');
-        } catch (\Exception $e) {
-            $this->assertTrue(true, 'Exception caught: '.$e::class);
-        }
+        $response = $this->actingAs($admin)->delete(route('admin.warehouse.delete', 99999));
+
+        $response->assertNotFound();
     }
 
     /**
-     * TEST-042: Profile photo file type only validated with standard mime types.
-     * Documented but not a confirmed vulnerability without attempting actual upload exploit.
+     * TEST-042: Profile photo file type validated with standard mime types.
      */
     public function test_user_profile_photo_validates_mimes_rule(): void
     {
         $admin = User::firstOrFail();
 
-        $rules = (new \App\Http\Controllers\Admin\UserController())
-            ->getValidationRulesForAnalysis() ?? [];
-        // Controller has no helper method; use Validator facade directly to replicate rules
+        // Use Validator facade directly to replicate rules
         $validator = \Illuminate\Support\Facades\Validator::make([
             'profile_photo' => 'not-an-image',
         ], [

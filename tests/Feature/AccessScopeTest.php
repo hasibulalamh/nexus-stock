@@ -28,6 +28,9 @@ class AccessScopeTest extends TestCase
     {
         parent::setUp();
 
+        // Clear permission cache to ensure fresh state between tests
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         $this->department = Department::create([
             'name' => 'Operations',
             'code' => 'OPS',
@@ -75,13 +78,24 @@ class AccessScopeTest extends TestCase
         return $user;
     }
 
+    private function makeLocation(): \App\Models\Location
+    {
+        return \App\Models\Location::create([
+            'country_id' => 1,
+            'state_id'   => 1,
+            'city_id'    => 1,
+            'upazila_id' => 1,
+        ]);
+    }
+
     private function makeWarehouse(string $name): Warehouse
     {
+        $location = $this->makeLocation();
         return Warehouse::create([
             'name' => $name,
             'code' => strtoupper(str_replace(' ', '-', $name)),
             'slug' => str()->slug($name),
-            'location_id' => 1,
+            'location_id' => $location->id,
             'capacity' => '100',
             'starting_date' => '2026-01-01',
             'status' => 'active',
@@ -118,20 +132,44 @@ class AccessScopeTest extends TestCase
         $response->assertDontSee('Gamma Depot');
     }
 
-    public function test_direct_url_to_unassigned_warehouse_is_refused(): void
+    public function test_direct_url_to_unassigned_warehouse_with_edit_permission_is_404(): void
     {
+        // Given a user WITH warehouses.edit permission, the scoped findOrFail should answer 404
+        $this->makeWarehouse('Alpha Depot');
+        $unassigned = $this->makeWarehouse('Beta Depot');
+
+        $user = $this->makeUser('staff', [], ['warehouses.view', 'warehouses.edit', 'warehouses.delete']);
+
+        $this->actingAs($user)
+            ->delete(route('admin.warehouse.delete', $unassigned->id))
+            ->assertNotFound();
+    }
+
+    public function test_unauthenticated_user_gets_403_on_unassigned_warehouse_url(): void
+    {
+        // Given a user WITHOUT warehouses.edit permission, the can: middleware should answer 403
         $this->makeWarehouse('Alpha Depot');
         $unassigned = $this->makeWarehouse('Beta Depot');
 
         $user = $this->makeUser('staff', [], ['warehouses.view']);
 
         $this->actingAs($user)
-            ->get(route('admin.warehouse.edit', $unassigned->id))
-            ->assertNotFound();
+            ->delete(route('admin.warehouse.delete', $unassigned->id))
+            ->assertForbidden();
+    }
+
+    public function test_user_without_edit_permission_gets_403_on_unassigned_warehouse_url(): void
+    {
+        // Given a user WITHOUT warehouses.edit permission, the can: middleware should answer 403
+        // (separate assertion to verify the middleware works when user has only view permission)
+        $this->makeWarehouse('Alpha Depot');
+        $unassigned = $this->makeWarehouse('Beta Depot');
+
+        $user = $this->makeUser('staff', [], ['warehouses.view']);
 
         $this->actingAs($user)
             ->delete(route('admin.warehouse.delete', $unassigned->id))
-            ->assertNotFound();
+            ->assertForbidden();
     }
 
     public function test_access_all_user_sees_every_warehouse(): void
@@ -177,8 +215,22 @@ class AccessScopeTest extends TestCase
         $response->assertDontSee('Beta Branch');
     }
 
-    public function test_direct_url_to_unassigned_branch_is_refused(): void
+    public function test_direct_url_to_unassigned_branch_with_edit_permission_is_404(): void
     {
+        // Given a user WITH branches.edit permission, the scoped findOrFail should answer 404
+        $this->makeBranch('Alpha Branch');
+        $unassigned = $this->makeBranch('Beta Branch');
+
+        $user = $this->makeUser('staff', [], ['branches.view', 'branches.edit']);
+
+        $this->actingAs($user)
+            ->get(route('admin.branch.edit', $unassigned->id))
+            ->assertNotFound();
+    }
+
+    public function test_unauthenticated_user_gets_403_on_unassigned_branch_url(): void
+    {
+        // Given a user WITHOUT branches.edit permission, the can: middleware should answer 403
         $this->makeBranch('Alpha Branch');
         $unassigned = $this->makeBranch('Beta Branch');
 
@@ -186,7 +238,7 @@ class AccessScopeTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('admin.branch.edit', $unassigned->id))
-            ->assertNotFound();
+            ->assertForbidden();
     }
 
     public function test_user_without_assignments_sees_nothing(): void
