@@ -18,10 +18,12 @@ class City extends Model
     {
         return $this->belongsTo(State::class);
     }
-    public function thanas()
+
+    public function upazilas()
     {
-        return $this->hasMany(Thana::class);
+        return $this->hasMany(Upazila::class);
     }
+
     public function location()
     {
         return $this->hasMany(Location::class);

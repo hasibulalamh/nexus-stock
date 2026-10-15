@@ -48,8 +48,7 @@
                   {{ $branch->location->country->name ?? '-' }},
                   {{ $branch->location->state->name ?? '-' }},
                   {{ $branch->location->city->name ?? '-' }},
-                  {{ $branch->location->thana->name ?? '-' }},
-                  {{ $branch->location->union->name ?? '-' }}
+                  {{ $branch->location->upazila->name ?? '-' }}
                 </span>
               </td>
 
