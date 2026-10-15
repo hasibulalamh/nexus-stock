@@ -82,8 +82,8 @@ class BangladeshLocationSeeder extends Seeder
             $city = City::firstOrCreate(
                 ['name' => $districtEn, 'state_id' => $state->id],
                 [
-                    'code' => strtoupper(substr($districtEn, 0, 3)) . '-' . ($rowCount + 200),
-                    'slug' => str_replace(' ', '-', strtolower($divisionEn)),
+                    'code' => strtoupper(substr($divisionEn, 0, 3)) . '-' . ($rowCount + 200),
+                    'slug' => str_replace(' ', '-', strtolower($districtEn . '-' . $rowCount)),
                 ]
             );
 

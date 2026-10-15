@@ -672,15 +672,22 @@ will drop it). Migrated to `PHPUnit\Framework\Attributes\Test` attributes: each
 the TEST-case IDs are preserved. No `@test` annotations remain anywhere in `tests/`.
 `php artisan test --compact` output is now free of metadata warnings.
 
-### 14.6 Other uncommitted work (not part of the test repair)
+### 14.6 Warehouse branch assignment (committed)
 
-The working tree also carries earlier, separate changes that have not been committed:
+Separately committed as `feat(warehouse): add branch assignment to warehouses`:
 
-* `2026_10_15_063156_add_branch_id_to_warehouses_table.php` (new migration)
+* `2026_10_15_063156_add_branch_id_to_warehouses_table.php` (new migration — nullable
+  `branch_id` FK, `nullOnDelete`)
 * `WarehouseController`, `Warehouse` model, warehouse create/edit views
-  (branch assignment on warehouses)
-* `User` model (`accessibleWarehouseIds` now includes warehouses reached via branch)
-* `BangladeshLocationSeeder` (idempotency / progress-bar tweaks)
+  (branch select, `branch_id` validated `nullable|exists:branches,id`)
+* `User::accessibleWarehouseIds` now unions directly assigned warehouses with
+  warehouses reached via the user's assigned branches
+
+Also committed as `fix(seed): make city codes and slugs district-based`:
+
+* `BangladeshLocationSeeder` — city `code`/`slug` now derive from the district
+  (division prefix + row offset, slug includes the row count) instead of reusing
+  the division name, which produced duplicate city slugs
 
 ---
 
