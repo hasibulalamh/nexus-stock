@@ -45,6 +45,8 @@ class BranchController extends Controller
             'state_id' => 'required',
             'city_id' => 'required',
             'upazila_id' => 'required',
+            'area' => 'nullable|string|max:120',
+            'address_line' => 'nullable|string|max:255',
             'capacity' => 'required',
             'starting_date' => 'required',
             'status' => 'required|in:active,inactive',
@@ -60,6 +62,8 @@ class BranchController extends Controller
             'state_id' => $request->state_id,
             'city_id' => $request->city_id,
             'upazila_id' => $request->upazila_id,
+            'area' => $request->area,
+            'address_line' => $request->address_line,
         ])->first();
 
         if(!$location){
@@ -68,6 +72,8 @@ class BranchController extends Controller
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
                 'upazila_id' => $request->upazila_id,
+                'area' => $request->area,
+                'address_line' => $request->address_line,
             ]);
         }
 
@@ -103,6 +109,8 @@ class BranchController extends Controller
             'state_id' => 'required',
             'city_id' => 'required',
             'upazila_id' => 'required',
+            'area' => 'nullable|string|max:120',
+            'address_line' => 'nullable|string|max:255',
             'capacity' => 'required',
             'starting_date' => 'required',
             'status' => 'required|in:active,inactive',
@@ -116,6 +124,8 @@ class BranchController extends Controller
             'state_id' => $request->state_id,
             'city_id' => $request->city_id,
             'upazila_id' => $request->upazila_id,
+            'area' => $request->area,
+            'address_line' => $request->address_line,
         ])->first();
 
         if(!$location){
@@ -124,6 +134,8 @@ class BranchController extends Controller
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
                 'upazila_id' => $request->upazila_id,
+                'area' => $request->area,
+                'address_line' => $request->address_line,
             ]);
         }
 

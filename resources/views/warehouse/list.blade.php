@@ -36,7 +36,7 @@
 
               <td>
                 <div class="nx-user-name">{{ $warehouse->name }}</div>
-                <div class="nx-user-sub d-lg-none">
+                <div class="nx-user-sub text-truncate d-lg-none" title="{{ $warehouse->location?->full_address ?: 'No location set' }}">
                   {{ $warehouse->location?->full_address ?: 'No location set' }}
                 </div>
               </td>
@@ -44,7 +44,7 @@
               <td><span class="nx-code">{{ $warehouse->code }}</span></td>
 
               <td class="d-none d-lg-table-cell">
-                <span class="nx-user-sub">
+                <span class="nx-user-sub text-truncate d-inline-block w-100" title="{{ $warehouse->location?->full_address ?: 'No location set' }}">
                   {{ $warehouse->location?->full_address ?: 'No location set' }}
                 </span>
               </td>

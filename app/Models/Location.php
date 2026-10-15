@@ -11,19 +11,21 @@ class Location extends Model
         'state_id',
         'city_id',
         'upazila_id',
+        'area',
+        'address_line',
         'status',
     ];    //Relationship
 
     public function getFullAddressAttribute(): string
     {
         $parts = [
-            $this->country?->name,
-            $this->state?->name,
-            $this->city?->name,
+            $this->getAttribute('address_line'),
+            $this->getAttribute('area'),
             $this->upazila?->name,
-            $this->upazila?->postcode,
-            $this->getAttribute('postcode'),
-            $this->getAttribute('address'),
+            $this->city?->name,
+            $this->state?->name,
+            $this->country?->name,
+            $this->getAttribute('postcode') ?: $this->upazila?->postcode,
         ];
 
         return implode(', ', array_values(array_filter($parts, fn ($part) => filled($part))));

@@ -91,6 +91,20 @@
             @error('upazila_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="area">Area (optional, e.g. Mirpur-10)</label>
+            <input type="text" id="area" name="area" value="{{ old('area') }}"
+                   class="form-control @error('area') is-invalid @enderror">
+            @error('area')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="address_line">Address line (optional, e.g. House 12, Road 3, Block C)</label>
+            <input type="text" id="address_line" name="address_line" value="{{ old('address_line') }}"
+                   class="form-control @error('address_line') is-invalid @enderror">
+            @error('address_line')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
           <div class="col-12">
             <div class="nx-section"><i class="fas fa-sliders"></i> Operational Details</div>
             <hr>

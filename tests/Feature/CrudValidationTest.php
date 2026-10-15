@@ -209,6 +209,79 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('password');
     }
 
+    public function test_branch_location_details_are_saved_and_updated(): void
+    {
+        $data = [
+            'name' => 'Detailed Branch',
+            'code' => 'DETAIL-BRANCH',
+            'slug' => 'detail-branch',
+            'country_id' => 1,
+            'state_id' => 2,
+            'city_id' => 3,
+            'upazila_id' => 4,
+            'area' => 'Mirpur-10',
+            'address_line' => 'House 12, Road 3, Block C',
+            'capacity' => 100,
+            'starting_date' => '2026-01-01',
+            'status' => 'active',
+        ];
+
+        $response = $this->actingAs($this->admin)->post(route('admin.branch.store'), $data);
+
+        $response->assertRedirect(route('admin.branch.list'));
+        $branch = \App\Models\Branch::where('code', 'DETAIL-BRANCH')->firstOrFail();
+        $location = $branch->location;
+        $this->assertSame('Mirpur-10', $location->area);
+        $this->assertSame('House 12, Road 3, Block C', $location->address_line);
+        $this->assertSame('House 12, Road 3, Block C, Mirpur-10', $location->full_address);
+
+        $this->actingAs($this->admin)->put(route('admin.branch.update', $branch->id), [
+            ...$data,
+            'area' => 'Uttara',
+            'address_line' => 'Road 7, Sector 4',
+        ])->assertRedirect(route('admin.branch.list'));
+
+        $branch->refresh();
+        $this->assertSame('Uttara', $branch->location->area);
+        $this->assertSame('Road 7, Sector 4', $branch->location->address_line);
+    }
+
+    public function test_branch_location_details_are_optional_and_length_validated(): void
+    {
+        $data = [
+            'name' => 'Plain Branch',
+            'code' => 'PLAIN-BRANCH',
+            'slug' => 'plain-branch',
+            'country_id' => 1,
+            'state_id' => 2,
+            'city_id' => 3,
+            'upazila_id' => 4,
+            'capacity' => 100,
+            'starting_date' => '2026-01-01',
+            'status' => 'active',
+        ];
+
+        $this->actingAs($this->admin)->post(route('admin.branch.store'), $data)
+            ->assertRedirect(route('admin.branch.list'));
+        $plainBranch = \App\Models\Branch::where('code', 'PLAIN-BRANCH')->firstOrFail();
+        $this->assertNull($plainBranch->location->area);
+        $this->assertNull($plainBranch->location->address_line);
+        $this->assertSame('', $plainBranch->location->full_address);
+
+        $response = $this->actingAs($this->admin)
+            ->from(route('admin.branch.create'))
+            ->post(route('admin.branch.store'), [
+                ...$data,
+                'code' => 'TOO-LONG',
+                'slug' => 'too-long',
+                'area' => str_repeat('a', 121),
+                'address_line' => str_repeat('b', 256),
+            ]);
+
+        $response->assertSessionHasErrors(['area', 'address_line']);
+        $this->assertDatabaseMissing('branches', ['code' => 'TOO-LONG']);
+    }
+
     public function test_user_edit_is_available_when_branch_and_warehouse_are_assigned(): void
     {
         $branch = \App\Models\Branch::create([
@@ -348,7 +421,7 @@ class CrudValidationTest extends TestCase
             ->assertOk()
             ->assertSee('Dhaka Main Branch')
             ->assertSee('Dhaka Main Warehouse')
-            ->assertSee('Bangladesh, Dhaka Division, Dhaka, Gulshan, 1212');
+            ->assertSee('Gulshan, Dhaka, Dhaka Division, Bangladesh, 1212');
     }
 
     /** TEST-030 */
