@@ -83,7 +83,7 @@
             </td>
 
             <td class="d-none d-lg-table-cell">
-              <span class="nx-stat-num">{{ $category->product_count }}</span>
+              <span class="nx-stat-num">{{ $category->products_count }}</span>
             </td>
 
             <td>

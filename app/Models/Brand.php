@@ -27,14 +27,6 @@ class Brand extends Model
     }
 
     /**
-     * Get the product count.
-     */
-    public function getProductCountAttribute(): int
-    {
-        return $this->products()->count();
-    }
-
-    /**
      * Get the logo URL.
      */
     public function getLogoUrlAttribute(): string

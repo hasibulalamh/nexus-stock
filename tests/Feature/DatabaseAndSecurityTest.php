@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Category;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Illuminate\Support\Facades\Schema;
@@ -182,5 +184,23 @@ class DatabaseAndSecurityTest extends TestCase
 
         $this->assertTrue($hasPdoUse, 'Unused use PDO is present');
         $this->assertFalse($hasPdoUsage, 'PDO never actually used - dead import');
+    }
+
+    public function test_category_list_product_counts_use_a_bounded_query_count(): void
+    {
+        foreach (range(1, 20) as $number) {
+            Category::create([
+                'name' => "Category {$number}",
+                'slug' => "category-{$number}",
+                'status' => 'active',
+            ]);
+        }
+
+        DB::enableQueryLog();
+        $this->actingAs(User::where('email', 'superadmin@storify.com')->firstOrFail())
+            ->get(route('admin.categories.list'))
+            ->assertOk();
+
+        $this->assertLessThanOrEqual(10, count(DB::getQueryLog()));
     }
 }

@@ -18,7 +18,7 @@ class BrandController extends Controller
     {
         $perPage = in_array((int) $request->per_page, [10, 25, 50]) ? (int) $request->per_page : 10;
 
-        $brands = Brand::with([])
+        $brands = Brand::withCount('products')
             ->when($request->filled('q'), function ($query) use ($request) {
                 $term = '%' . trim($request->q) . '%';
                 $query->where(function ($w) use ($term) {

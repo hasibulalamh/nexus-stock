@@ -61,21 +61,4 @@ class Product extends Model
         return asset('assets/img/product-placeholder.svg');
     }
 
-    /**
-     * Boot the model.
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        // When a product is created/updated/deleted, touch the category and brand for caching
-        static::saved(function ($product) {
-            if ($product->category) {
-                $product->category->touch();
-            }
-            if ($product->brand) {
-                $product->brand->touch();
-            }
-        });
-    }
 }

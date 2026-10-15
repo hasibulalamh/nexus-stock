@@ -47,14 +47,6 @@ class Category extends Model
     }
 
     /**
-     * Get the product count.
-     */
-    public function getProductCountAttribute(): int
-    {
-        return $this->products()->count();
-    }
-
-    /**
      * Scope to filter by status.
      */
     public function scopeActive($query)
