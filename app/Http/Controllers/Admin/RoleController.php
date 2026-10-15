@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Spatie\Activitylog\Models\Activity;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleController extends Controller
 {
@@ -38,7 +39,7 @@ class RoleController extends Controller
     public function store(Request $request)
     {
         $validate = Validator::make($request->all(), [
-            'name' => 'required|max:255|unique:roles,name',
+            'name' => 'required|max:255',
             'icon_class' => 'required|string|starts_with:fa-',
             'parent_id' => 'nullable|exists:roles,id',
             'status' => 'required|in:active,inactive',
@@ -46,6 +47,11 @@ class RoleController extends Controller
 
         if ($validate->fails()) {
             return redirect()->route('admin.roles.create')->withErrors($validate)->withInput();
+        }
+        if (Role::whereRaw('LOWER(name) = ?', [strtolower($request->name)])->exists()) {
+            return redirect()->route('admin.roles.create')
+                ->withErrors(['name' => 'The name has already been taken.'])
+                ->withInput();
         }
 
         // All roles land on the common dashboard
@@ -60,14 +66,6 @@ class RoleController extends Controller
             'guard_name' => 'web',
             'dashboard_route' => $dashboardRoute,
         ]);
-
-        // Log activity
-        $user = Auth::user();
-        activity()
-            ->causedBy($user)
-            ->performedOn($role)
-            ->withProperties(['attributes' => $role->toArray()])
-            ->log('Created new role');
 
         return redirect()->route('admin.roles.list')->with('success', 'Role created successfully');
     }
@@ -86,7 +84,7 @@ class RoleController extends Controller
         $role = Role::findOrFail($id);
 
         $validation = Validator::make($request->all(), [
-            'name' => 'required|max:255|unique:roles,name,' . $id,
+            'name' => 'required|max:255',
             'icon_class' => 'required|string|starts_with:fa-',
             'parent_id' => 'nullable|exists:roles,id',
             'status' => 'required|in:active,inactive',
@@ -95,9 +93,13 @@ class RoleController extends Controller
         if ($validation->fails()) {
             return redirect()->back()->withErrors($validation)->withInput();
         }
+        if (Role::whereRaw('LOWER(name) = ?', [strtolower($request->name)])
+            ->where('id', '!=', $id)->exists()) {
+            return redirect()->back()->withErrors(['name' => 'The name has already been taken.'])->withInput();
+        }
 
-        if ($role->name === 'superadmin' && $request->name !== 'superadmin') {
-            return redirect()->back()->withInput()->with('error', 'The superadmin role cannot be renamed.');
+        if ($role->name === 'superadmin') {
+            return redirect()->back()->withInput()->with('error', 'The superadmin role cannot be edited.');
         }
 
         try {
@@ -108,14 +110,6 @@ class RoleController extends Controller
                 'status' => $request->status,
                 'guard_name' => 'web',
             ]);
-
-            // Log activity
-            $user = Auth::user();
-            activity()
-                ->causedBy($user)
-                ->performedOn($role)
-                ->withProperties(['updated' => $request->all()])
-                ->log('Updated role');
 
             return redirect()->route('admin.roles.list')
                              ->with('success', 'Role updated successfully');
@@ -148,13 +142,6 @@ class RoleController extends Controller
 
         $role->delete();
 
-        // Log delete
-        $user = Auth::user();
-        activity()
-            ->causedBy($user)
-            ->performedOn($role)
-            ->log('Deleted role');
-
         return redirect()->route('admin.roles.list')
                          ->with('success', 'Role deleted successfully');
     }
@@ -163,10 +150,12 @@ class RoleController extends Controller
     public function auditLog($id)
     {
         $role = Role::findOrFail($id);
-        $activities = Activity::where('subject_type', get_class($role))
+        $activities = Activity::with('causer')
+            ->where('subject_type', get_class($role))
             ->where('subject_id', $role->id)
             ->latest()
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.role.audit-log', compact('role', 'activities'));
     }
@@ -186,6 +175,7 @@ class RoleController extends Controller
 
         $permissions = Permission::whereIn('id', $request->permissions ?? [])->pluck('name');
         $role->syncPermissions($permissions);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Log activity
         $user = Auth::user();

@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Spatie\Permission\Models\Role as SpatieRole;
+use App\Models\Concerns\RecordsActivity;
 
 class Role extends SpatieRole
 {
+    use RecordsActivity;
     protected $fillable = [
         'name',
         'guard_name',
