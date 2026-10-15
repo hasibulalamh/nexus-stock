@@ -42,6 +42,13 @@
                             <span>Roles</span><i class="ns-dot"></i>
                         </a>
                     </li>
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.activity-log') ? 'active' : '' }}"
+                           href="{{ route('admin.activity-log') }}">
+                            <span class="ns-ico"><i class="fas fa-clipboard-list"></i></span>
+                            <span>Activity log</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
                 @endcan
                 @can('permissions.view')
                     <li>

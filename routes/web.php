@@ -40,6 +40,7 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
     Route::put('roles/update/{id}', [RoleController::class, 'update'])->middleware('can:roles.edit')->name('roles.update');
     Route::delete('roles/delete/{id}', [RoleController::class, 'delete'])->middleware('can:roles.delete')->name('roles.delete');
     Route::get('roles/audit-log/{id}', [RoleController::class, 'auditLog'])->middleware('can:roles.view')->name('roles.audit-log');
+    Route::get('activity-log', [RoleController::class, 'activityLog'])->middleware('can:roles.view')->name('activity-log');
     Route::get('roles/permissions/assign/{id}', [RoleController::class, 'permissionAssign'])->middleware('can:roles.assign')->name('roles.permissions.assign');
     Route::post('roles/permissions/assign/store/{id}', [RoleController::class, 'permissionAssignStore'])->middleware('can:roles.assign')->name('roles.permissions.assign.store');
 

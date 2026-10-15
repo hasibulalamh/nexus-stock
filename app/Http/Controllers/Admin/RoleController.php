@@ -160,6 +160,23 @@ class RoleController extends Controller
         return view('admin.role.audit-log', compact('role', 'activities'));
     }
 
+    public function activityLog(Request $request)
+    {
+        $activities = Activity::with('causer')
+            ->when($request->filled('user_id'), fn ($query) => $query->where('causer_id', $request->user_id))
+            ->when($request->filled('module'), fn ($query) => $query->where('subject_type', 'like', '%\\'.$request->module))
+            ->when($request->filled('from'), fn ($query) => $query->whereDate('created_at', '>=', $request->from))
+            ->when($request->filled('to'), fn ($query) => $query->whereDate('created_at', '<=', $request->to))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        $users = \App\Models\User::query()->orderBy('full_name')->get(['id', 'full_name']);
+        $modules = ['User', 'Role', 'Branch', 'Warehouse', 'Category', 'Brand', 'Product'];
+
+        return view('admin.activity-log', compact('activities', 'users', 'modules'));
+    }
+
     // Permission assign page
     public function permissionAssign($id)
     {

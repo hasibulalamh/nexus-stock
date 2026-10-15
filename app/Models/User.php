@@ -11,12 +11,13 @@ use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\Warehouse;
+use App\Models\Concerns\RecordsActivity;
 
 
 class User extends Authenticatable
 {
     /** @use HasFactory<Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasFactory, Notifiable, HasRoles, SoftDeletes, RecordsActivity;
 
 
     /**

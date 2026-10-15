@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\RecordsActivity;
 
 class Warehouse extends Model
 {
+    use RecordsActivity;
     protected $fillable = [
         'name',
         'code',

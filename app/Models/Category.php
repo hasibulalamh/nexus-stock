@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\RecordsActivity;
 
 class Category extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, RecordsActivity;
 
     protected $fillable = [
         'name',
