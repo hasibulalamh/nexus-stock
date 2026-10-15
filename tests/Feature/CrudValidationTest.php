@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Department;
 use App\Models\Designation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class CrudValidationTest extends TestCase
@@ -27,7 +28,8 @@ class CrudValidationTest extends TestCase
 
     // ========================= DEPARTMENT TESTS =========================
 
-    /** @test TEST-020 */
+    /** TEST-020 */
+    #[Test]
     public function department_can_be_created_with_valid_data(): void
     {
         $data = [
@@ -47,7 +49,8 @@ class CrudValidationTest extends TestCase
         $this->assertDatabaseHas('departments', ['name' => 'Test Department']);
     }
 
-    /** @test TEST-021 */
+    /** TEST-021 */
+    #[Test]
     public function department_creation_fails_with_missing_required_fields(): void
     {
         $response = $this->actingAs($this->admin)->from(route('admin.departments.create'))
@@ -57,7 +60,8 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors(['name', 'code', 'status']);
     }
 
-    /** @test TEST-022 */
+    /** TEST-022 */
+    #[Test]
     public function department_status_must_be_valid_enum(): void
     {
         $response = $this->actingAs($this->admin)->from(route('admin.departments.create'))
@@ -70,7 +74,8 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('status');
     }
 
-    /** @test TEST-023 */
+    /** TEST-023 */
+    #[Test]
     public function department_can_be_updated(): void
     {
         $dept = Department::firstOrCreate(
@@ -87,7 +92,8 @@ class CrudValidationTest extends TestCase
         $this->assertDatabaseHas('departments', ['id' => $dept->id, 'name' => 'Updated']);
     }
 
-    /** @test TEST-024 */
+    /** TEST-024 */
+    #[Test]
     public function department_can_be_deleted(): void
     {
         $dept = Department::create(['name' => 'ToDelete', 'code' => 'DEL', 'status' => 'active']);
@@ -102,7 +108,8 @@ class CrudValidationTest extends TestCase
 
     // ========================= DESIGNATION TESTS =========================
 
-    /** @test TEST-025 */
+    /** TEST-025 */
+    #[Test]
     public function designation_requires_valid_department_foreign_key(): void
     {
         $response = $this->actingAs($this->admin)->from(route('admin.designations.create'))
@@ -116,7 +123,8 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('department_id');
     }
 
-    /** @test TEST-026 */
+    /** TEST-026 */
+    #[Test]
     public function designation_unique_name_is_enforced(): void
     {
         $dept = Department::firstOrFail();
@@ -140,7 +148,8 @@ class CrudValidationTest extends TestCase
 
     // ========================= ROLE TESTS =========================
 
-    /** @test TEST-027 */
+    /** TEST-027 */
+    #[Test]
     public function role_icon_class_validation_requires_fontawesome_prefix(): void
     {
         $response = $this->actingAs($this->admin)->from(route('admin.roles.create'))
@@ -154,7 +163,8 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('icon_class');
     }
 
-    /** @test TEST-028 */
+    /** TEST-028 */
+    #[Test]
     public function role_store_validation_name_unique(): void
     {
         // Use superadmin name already seeded
@@ -171,7 +181,8 @@ class CrudValidationTest extends TestCase
 
     // ========================= USER TESTS =========================
 
-    /** @test TEST-029 */
+    /** TEST-029 */
+    #[Test]
     public function user_store_validation_password_confirmation_required(): void
     {
         $role = Role::firstOrFail();
@@ -197,7 +208,8 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('password');
     }
 
-    /** @test TEST-030 */
+    /** TEST-030 */
+    #[Test]
     public function user_store_validation_phone_11_digits(): void
     {
         $role = Role::firstOrFail();
@@ -223,7 +235,8 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('phone');
     }
 
-    /** @test TEST-031 */
+    /** TEST-031 */
+    #[Test]
     public function user_store_validation_gender_in_enum(): void
     {
         $role = Role::firstOrFail();
@@ -249,7 +262,8 @@ class CrudValidationTest extends TestCase
         $response->assertSessionHasErrors('gender');
     }
 
-    /** @test TEST-032 - User edit method now exists and works */
+    /** TEST-032 - User edit method now exists and works */
+    #[Test]
     public function user_edit_route_with_valid_user_id_returns_200(): void
     {
         $response = $this->actingAs($this->admin)->get(route('admin.users.edit', $this->admin->id));
@@ -258,7 +272,8 @@ class CrudValidationTest extends TestCase
         $response->assertViewIs('admin.user.edit');
     }
 
-    /** @test TEST-032b - User edit method returns 404 for non-existent user */
+    /** TEST-032b - User edit method returns 404 for non-existent user */
+    #[Test]
     public function user_edit_route_with_invalid_user_id_returns_404(): void
     {
         $response = $this->actingAs($this->admin)->get(route('admin.users.edit', 99999));
@@ -268,7 +283,8 @@ class CrudValidationTest extends TestCase
 
     // ========================= BRANCH getManagers METHOD =========================
 
-    /** @test TEST-033 */
+    /** TEST-033 */
+    #[Test]
     public function branch_getmanagers_route_returns_404_as_route_not_defined(): void
     {
         $response = $this->actingAs($this->admin)->get('/admin/branch/get-managers/1');

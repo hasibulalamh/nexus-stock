@@ -454,7 +454,7 @@ No changes needed for A1.
 ### B: Table structure findings
 
 **Findings:**
-- Warehouse does NOT belong to a branch (no `branch_id` column on warehouses table)
+- At the time of the scope work: Warehouse did NOT belong to a branch (no `branch_id` column on warehouses table). **Revised since:** migration `2026_10_15_063156_add_branch_id_to_warehouses_table.php` (uncommitted, see §14.6) adds a nullable `branch_id` FK to warehouses, and a user's branch assignments now also grant access to warehouses reached via that branch.
 - Both `branch_user` and `warehouse_user` pivot tables exist (migrations `2026_10_14_000002` and `2026_10_14_000003`)
 - `users.access_all` column exists (migration `2026_10_14_000004`, default false)
 - User model has `hasAccessAll()`, `accessibleBranchIds()`, `accessibleWarehouseIds()` helpers
@@ -465,7 +465,7 @@ No changes needed for A1.
 - Superadmin always has all access regardless of flag
 - User with `access_all = true` sees everything (helpers return null = unrestricted)
 - Otherwise assigned ids returned (empty array = no access)
-- Warehouses do NOT belong to branches, so branch assignments do NOT imply warehouse access — warehouses must be assigned directly
+- Warehouses originally did NOT belong to branches, so branch assignments did NOT imply warehouse access — warehouses must be assigned directly. **Revised since:** with `branch_id` on warehouses (see §14.6), branch assignment now also grants the warehouses of that branch
 
 ### B1: Migrations
 
@@ -508,7 +508,8 @@ No changes needed for A1.
 - `test_direct_url_to_unassigned_branch_is_refused`
 - `test_user_without_assignments_sees_nothing`
 
-**Cannot run** — pdo_sqlite missing.
+**Cannot run** — see §9 for the environment checks at the time of writing; the
+test suite now runs fully (see §14).
 
 ---
 
@@ -534,13 +535,13 @@ No changes needed for A1.
 
 ## 9. Verification — what could not run
 
-| Check | Reason |
-| --- | --- |
-| Database-dependent tests | pdo_sqlite driver missing |
-| `php artisan migrate --pretend` | No DB connection available |
-| Browser visual verification | Chrome: not found |
-| Form submission flows | Cannot test through browser |
-| Image upload flows | No DB, cannot test |
+| Check | Reason | Current status |
+| --- | --- | --- |
+| Database-dependent tests | pdo_sqlite driver missing | **Now runs** — full suite passes (see §14) |
+| `php artisan migrate --pretend` | No DB connection available | — |
+| Browser visual verification | Chrome: not found | — |
+| Form submission flows | Cannot test through browser | — |
+| Image upload flows | No DB, cannot test | — |
 
 ---
 
@@ -573,7 +574,7 @@ The seeder does NOT auto-assign these to non-superadmin roles (by design).
 ## 12. Assumptions
 
 1. **Status values:** `'active'/'inactive'` (matching existing codebase)
-2. **Branch/warehouse relationship:** Warehouses do NOT belong to branches (confirmed — no `branch_id` on Warehouse)
+2. **Branch/warehouse relationship:** Warehouses did NOT belong to branches at the time of the scope work (confirmed — no `branch_id` on Warehouse). **Revised since:** `branch_id` added (see §7 and §14.6, uncommitted)
 3. **Upload paths:** Brand logos → `public/uploads/brand/`, Product images → `public/uploads/product/` (matching user photo convention at `public/uploads/user/`)
 4. **Default placeholders:** `assets/img/brand-placeholder.png`, `assets/img/product-placeholder.png`
 5. **Max category depth:** 2 levels (root → child only, no grandchildren) — enforced in validation
@@ -598,7 +599,92 @@ The seeder does NOT auto-assign these to non-superadmin roles (by design).
 
 ---
 
-## 14. Final commit list
+## 14. Test suite repair and PHPUnit attribute migration
+
+The feature test suite was not runnable when this session started (30 failing, 36
+passing). It now passes completely (commits `fix(tests): repair the feature suite…`
+and `test(crud): migrate @test doc-comments to PHPUnit attributes`):
+
+| Check | Result |
+| --- | --- |
+| `php artisan test --compact` | ✅ **67 passed, 264 assertions, 0 failed** (exit 0) |
+
+### 14.1 Root cause of most failures — CSRF 419s
+
+Laravel 12 renamed the CSRF middleware: `VerifyCsrfToken` no longer exists; the
+registered class is `Illuminate\Foundation\Http\Middleware\ValidateCsrfToken`.
+Every POST/PUT/DELETE test was returning **419** because the session token never
+matched the request token under the `array` session driver.
+
+**Fix (single point):** `tests/TestCase.php` now disables the middleware for all
+tests:
+
+```php
+$this->withoutMiddleware(ValidateCsrfToken::class);
+```
+
+CSRF is a browser concern; feature tests exercise routing, auth and validation.
+All per-request `['_token' => csrf_token()]` plumbing and `Session::put('_token', …)`
+setup code was removed from the test files.
+
+### 14.2 Seeding fixes
+
+`afterRefreshingDatabase()` now seeds `PermissionSeeder` + `AdminSeeder` in:
+
+* `DatabaseAndSecurityTest` — was only seeding `PermissionSeeder`, so
+  `superadmin@storify.com` lookups hit `firstOrFail()` and blew up
+* `ExampleTest` — had no seeding at all; the authenticated test got `null`
+* `StartupAndRoutesTest` — same problem
+
+`AuthenticationTest` and `CrudValidationTest` already had the correct seeding;
+their only issue was the CSRF 419s.
+
+### 14.3 Stale assertions updated to match fixed behaviour
+
+Several tests asserted bugs that had since been fixed in the app code. They now
+assert the corrected behaviour:
+
+| Test | Was asserting | Now asserts |
+| --- | --- | --- |
+| `test_login_short_password_fails_validation` | `password` validation error (min:8) | `email` credential error — `LoginController` validates `required\|string`, no min:8 |
+| `test_all_admin_routes_require_authentication` | included non-existent `admin.permissions.create` route | removed from the list |
+| `test_authorization_middleware_on_admin_routes` | no admin route has `can:` middleware | all admin routes except `admin/dashboard` now have `can:` middleware |
+| `test_warehouse_delete_with_nonexistent_id_returns_404` | null-pointer `Error` from `find()` | `findOrFail()` returns 404 |
+| `test_user_profile_photo_validates_mimes_rule` | called non-existent `getValidationRulesForAnalysis()` | validates via `Validator` facade directly |
+| `user_edit_route_returns_500_because_method_missing` | `UserController::edit` missing | split: valid ID → 200, invalid ID → 404 (method now exists) |
+| `branch_getmanagers_route_returns_500_as_method_is_undefined` | `BadMethodCallException` | route removed entirely → 404 |
+| `test_warehouse_location_id_uses_string_type_not_foreign_key` | `assertEquals('string', …)` | `assertContains(…, ['string', 'varchar'])` — SQLite reports `varchar` |
+| `test_user_table_role_fk_cascades_on_delete_confirmed` | `assertDatabaseMissing($table, $data, $msg)` — 3rd arg was parsed as a DB connection name | `assertFalse(User::where(...)->exists(), $msg)` |
+| 3× `AccessScopeTest` warehouse-delete tests | try/catch chains for `TokenMismatchException`/`AuthorizationException` | plain `assertNotFound()` / `assertForbidden()` |
+
+### 14.4 `AccessScopeTest` warehouse delete
+
+Added `warehouses.delete` to the permission list in
+`test_direct_url_to_unassigned_warehouse_with_edit_permission_is_404` — the route
+uses `can:warehouses.delete`, so without it the middleware correctly answered 403
+before the scoped `findOrFail` could answer 404.
+
+### 14.5 PHPUnit deprecation warnings — resolved
+
+`CrudValidationTest` used `@test` doc-comment metadata (15 warnings — PHPUnit 12
+will drop it). Migrated to `PHPUnit\Framework\Attributes\Test` attributes: each
+`/** @test TEST-XXX */` became `/** TEST-XXX */` + `#[Test]` on the method, so
+the TEST-case IDs are preserved. No `@test` annotations remain anywhere in `tests/`.
+`php artisan test --compact` output is now free of metadata warnings.
+
+### 14.6 Other uncommitted work (not part of the test repair)
+
+The working tree also carries earlier, separate changes that have not been committed:
+
+* `2026_10_15_063156_add_branch_id_to_warehouses_table.php` (new migration)
+* `WarehouseController`, `Warehouse` model, warehouse create/edit views
+  (branch assignment on warehouses)
+* `User` model (`accessibleWarehouseIds` now includes warehouses reached via branch)
+* `BangladeshLocationSeeder` (idempotency / progress-bar tweaks)
+
+---
+
+## 15. Final commit list
 
 ```
 b657faa feat(inventory): add sidebar group, permissions and routes
