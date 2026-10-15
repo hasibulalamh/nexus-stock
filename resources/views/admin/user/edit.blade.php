@@ -175,7 +175,7 @@
                       multiple size="6" aria-label="Branches">
                 @foreach($branches as $branch)
                   <option value="{{ $branch->id }}"
-                          @selected(in_array($branch->id, old('branch_ids', $user->branches()->pluck('id')->all())))>{{ $branch->name }}</option>
+                          @selected(in_array($branch->id, old('branch_ids', $user->branches()->pluck('branches.id')->all())))>{{ $branch->name }}</option>
                 @endforeach
               </select>
               @error('branch_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
@@ -188,7 +188,7 @@
                       multiple size="6" aria-label="Warehouses">
                 @foreach($warehouses as $warehouse)
                   <option value="{{ $warehouse->id }}"
-                          @selected(in_array($warehouse->id, old('warehouse_ids', $user->warehouses()->pluck('id')->all())))>{{ $warehouse->name }}</option>
+                          @selected(in_array($warehouse->id, old('warehouse_ids', $user->warehouses()->pluck('warehouses.id')->all())))>{{ $warehouse->name }}</option>
                 @endforeach
               </select>
               @error('warehouse_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
