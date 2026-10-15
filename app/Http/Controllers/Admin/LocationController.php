@@ -96,13 +96,13 @@ class LocationController extends Controller
                         ]
                     );
 
-                    // Thana = Upazila
-                    $thanaName = $upazilaEn;
+                    // Upazila
+                    $upazilaName = $upazilaEn;
                     $upazila = Upazila::firstOrCreate(
-                        ['name' => $thanaName, 'city_id' => $city->id],
+                        ['name' => $upazilaName, 'city_id' => $city->id],
                         [
-                            'code' => strtoupper(substr($thanaName, 0, 3)) . '-' . Str::random(3, '0123456789'),
-                            'slug' => Str::slug($thanaName),
+                            'code' => strtoupper(substr($upazilaName, 0, 3)) . '-' . Str::random(3, '0123456789'),
+                            'slug' => Str::slug($upazilaName),
                         ]
                     );
 

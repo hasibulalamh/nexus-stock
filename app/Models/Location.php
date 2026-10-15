@@ -29,11 +29,6 @@ class Location extends Model
     {
         return $this->belongsTo(Upazila::class);
     }
-
-    public function thana()
-    {
-        return $this->upazila();
-    }
     public function warehouse()
     {
         return $this->hasMany(Warehouse::class);

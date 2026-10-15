@@ -165,10 +165,6 @@ class WarehouseController extends Controller
         return response()->json($city ? $city->upazilas : []);
     }
 
-    public function getUnions($thanaId){
-        return response()->json([]);
-    }
-
     public function getZipcode($upazilaId){
         $upazila = Upazila::find($upazilaId);
         return response()->json([
