@@ -13,6 +13,22 @@ class Location extends Model
         'upazila_id',
         'status',
     ];    //Relationship
+
+    public function getFullAddressAttribute(): string
+    {
+        $parts = [
+            $this->country?->name,
+            $this->state?->name,
+            $this->city?->name,
+            $this->upazila?->name,
+            $this->upazila?->postcode,
+            $this->getAttribute('postcode'),
+            $this->getAttribute('address'),
+        ];
+
+        return implode(', ', array_values(array_filter($parts, fn ($part) => filled($part))));
+    }
+
     public function country()
     {
         return $this->belongsTo(Country::class);

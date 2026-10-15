@@ -23,7 +23,19 @@ class UserController extends Controller
     {
         $perPage = in_array((int) $request->per_page, [10, 25, 50]) ? (int) $request->per_page : 10;
 
-        $users = User::with(['department', 'designation', 'roles'])
+        $users = User::with([
+            'department',
+            'designation',
+            'roles',
+            'branches.location.upazila',
+            'branches.location.city',
+            'branches.location.state',
+            'branches.location.country',
+            'warehouses.location.upazila',
+            'warehouses.location.city',
+            'warehouses.location.state',
+            'warehouses.location.country',
+        ])
             ->when($request->filled('q'), function ($query) use ($request) {
                 $term = '%' . trim($request->q) . '%';
                 $query->where(function ($w) use ($term) {
@@ -52,8 +64,12 @@ class UserController extends Controller
         $departments = Department::all();
         $designations = Designation::all();
         // The picker only offers what the editing user may access themselves.
-        $branches = Branch::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
-        $warehouses = Warehouse::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
+        $branches = Branch::accessibleTo(auth()->user())
+            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->orderBy('name')->get(['id', 'name', 'location_id']);
+        $warehouses = Warehouse::accessibleTo(auth()->user())
+            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->orderBy('name')->get(['id', 'name', 'location_id']);
 
         return view('admin.user.create', compact('roles', 'departments', 'designations', 'branches', 'warehouses'));
     }
@@ -155,8 +171,12 @@ class UserController extends Controller
         $departments = Department::all();
         $designations = Designation::all();
         // The picker only offers what the editing user may access themselves.
-        $branches = Branch::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
-        $warehouses = Warehouse::accessibleTo(auth()->user())->orderBy('name')->get(['id', 'name']);
+        $branches = Branch::accessibleTo(auth()->user())
+            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->orderBy('name')->get(['id', 'name', 'location_id']);
+        $warehouses = Warehouse::accessibleTo(auth()->user())
+            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->orderBy('name')->get(['id', 'name', 'location_id']);
 
         return view('admin.user.edit', compact('user', 'roles', 'departments', 'designations', 'branches', 'warehouses'));
     }

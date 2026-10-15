@@ -37,7 +37,7 @@
               <td>
                 <div class="nx-user-name">{{ $warehouse->name }}</div>
                 <div class="nx-user-sub d-lg-none">
-                  {{ $warehouse->location->city->name ?? '-' }}, {{ $warehouse->location->country->name ?? '-' }}
+                  {{ $warehouse->location?->full_address ?: 'No location set' }}
                 </div>
               </td>
 
@@ -45,10 +45,7 @@
 
               <td class="d-none d-lg-table-cell">
                 <span class="nx-user-sub">
-                  {{ $warehouse->location->country->name ?? '-' }},
-                  {{ $warehouse->location->state->name ?? '-' }},
-                  {{ $warehouse->location->city->name ?? '-' }},
-                  {{ $warehouse->location->upazila->name ?? '-' }}
+                  {{ $warehouse->location?->full_address ?: 'No location set' }}
                 </span>
               </td>
 

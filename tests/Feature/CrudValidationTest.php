@@ -278,6 +278,79 @@ class CrudValidationTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'rollback@example.com']);
     }
 
+    public function test_user_edit_renders_branch_and_warehouse_locations(): void
+    {
+        $country = \App\Models\Country::create(['name' => 'Bangladesh', 'code' => 'BD', 'slug' => 'bangladesh']);
+        $state = \App\Models\State::create([
+            'name' => 'Dhaka Division',
+            'code' => 'DHK',
+            'slug' => 'dhaka-division',
+            'country_id' => $country->id,
+        ]);
+        $city = \App\Models\City::create([
+            'name' => 'Dhaka',
+            'code' => 'DHK-CITY',
+            'slug' => 'dhaka',
+            'state_id' => $state->id,
+        ]);
+        $upazila = \App\Models\Upazila::create([
+            'name' => 'Gulshan',
+            'code' => 'GUL',
+            'slug' => 'gulshan',
+            'city_id' => $city->id,
+            'postcode' => '1212',
+        ]);
+        $location = \App\Models\Location::create([
+            'country_id' => $country->id,
+            'state_id' => $state->id,
+            'city_id' => $city->id,
+            'upazila_id' => $upazila->id,
+        ]);
+        $branch = \App\Models\Branch::create([
+            'name' => 'Dhaka Main Branch',
+            'code' => 'DHK-MAIN',
+            'slug' => 'dhaka-main',
+            'location_id' => $location->id,
+            'capacity' => '100',
+            'starting_date' => '2026-01-01',
+            'status' => 'active',
+        ]);
+        $warehouse = \App\Models\Warehouse::create([
+            'name' => 'Dhaka Main Warehouse',
+            'code' => 'DHK-WH',
+            'slug' => 'dhaka-main-warehouse',
+            'location_id' => $location->id,
+            'branch_id' => $branch->id,
+            'capacity' => '100',
+            'starting_date' => '2026-01-01',
+            'status' => 'active',
+        ]);
+        $target = User::create([
+            'full_name' => 'Location Target',
+            'email' => 'location-target@example.com',
+            'password' => 'password123',
+            'phone' => '01712345679',
+            'gender' => 'male',
+            'employee_id' => 'EMP-LOCATION',
+            'role_id' => $this->admin->role_id,
+            'department_id' => $this->admin->department_id,
+            'designation_id' => $this->admin->designation_id,
+            'join_date' => '2026-01-01',
+            'profile_photo' => 'default.png',
+            'status' => 'active',
+        ]);
+        $target->assignRole('superadmin');
+        $target->branches()->attach($branch->id);
+        $target->warehouses()->attach($warehouse->id);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.users.edit', $target->id))
+            ->assertOk()
+            ->assertSee('Dhaka Main Branch')
+            ->assertSee('Dhaka Main Warehouse')
+            ->assertSee('Bangladesh, Dhaka Division, Dhaka, Gulshan, 1212');
+    }
+
     /** TEST-030 */
     #[Test]
     public function user_store_validation_phone_11_digits(): void

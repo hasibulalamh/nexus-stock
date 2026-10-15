@@ -68,6 +68,7 @@
             <th class="d-none d-lg-table-cell">Department</th>
             <th class="d-none d-lg-table-cell">Designation</th>
             <th class="d-none d-md-table-cell">Role</th>
+            <th class="d-none d-xl-table-cell">Allocations</th>
             <th>Status</th>
             <th class="text-end">Actions</th>
           </tr>
@@ -99,6 +100,19 @@
               @else
                 <span class="text-muted">-</span>
               @endif
+            </td>
+
+            <td class="d-none d-xl-table-cell">
+              @forelse($user->branches as $branch)
+                <div class="small">{{ $branch->name }}</div>
+                <div class="nx-user-sub">{{ $branch->location?->full_address ?: 'No location set' }}</div>
+              @empty
+                <span class="text-muted">No branch assigned</span>
+              @endforelse
+              @foreach($user->warehouses as $warehouse)
+                <div class="small">{{ $warehouse->name }}</div>
+                <div class="nx-user-sub">{{ $warehouse->location?->full_address ?: 'No location set' }}</div>
+              @endforeach
             </td>
 
             <td>
@@ -154,7 +168,7 @@
           </tr>
           @empty
           <tr>
-            <td colspan="7" class="text-center py-5">
+            <td colspan="8" class="text-center py-5">
               <i class="fas fa-user-slash fs-3 d-block mb-2 text-muted"></i>
               <div class="fw-semibold">No users found</div>
               <div class="text-muted small">

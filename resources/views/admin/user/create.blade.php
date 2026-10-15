@@ -157,7 +157,9 @@
             <select name="branch_ids[]" id="branch_ids" class="form-select @error('branch_ids') is-invalid @enderror"
                     multiple size="6" aria-label="Branches">
               @foreach($branches as $branch)
-                <option value="{{ $branch->id }}" @selected(in_array($branch->id, old('branch_ids', [])))>{{ $branch->name }}</option>
+                <option value="{{ $branch->id }}" @selected(in_array($branch->id, old('branch_ids', [])))>
+                  {{ $branch->name }} - {{ $branch->location?->full_address ?: 'No location set' }}
+                </option>
               @endforeach
             </select>
             @error('branch_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
@@ -169,7 +171,9 @@
             <select name="warehouse_ids[]" id="warehouse_ids" class="form-select @error('warehouse_ids') is-invalid @enderror"
                     multiple size="6" aria-label="Warehouses">
               @foreach($warehouses as $warehouse)
-                <option value="{{ $warehouse->id }}" @selected(in_array($warehouse->id, old('warehouse_ids', [])))>{{ $warehouse->name }}</option>
+                <option value="{{ $warehouse->id }}" @selected(in_array($warehouse->id, old('warehouse_ids', [])))>
+                  {{ $warehouse->name }} - {{ $warehouse->location?->full_address ?: 'No location set' }}
+                </option>
               @endforeach
             </select>
             @error('warehouse_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror

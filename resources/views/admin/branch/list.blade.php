@@ -37,7 +37,7 @@
               <td>
                 <div class="nx-user-name">{{ $branch->name }}</div>
                 <div class="nx-user-sub d-lg-none">
-                  {{ $branch->location->city->name ?? '-' }}, {{ $branch->location->country->name ?? '-' }}
+                  {{ $branch->location?->full_address ?: 'No location set' }}
                 </div>
               </td>
 
@@ -45,10 +45,7 @@
 
               <td class="d-none d-lg-table-cell">
                 <span class="nx-user-sub">
-                  {{ $branch->location->country->name ?? '-' }},
-                  {{ $branch->location->state->name ?? '-' }},
-                  {{ $branch->location->city->name ?? '-' }},
-                  {{ $branch->location->upazila->name ?? '-' }}
+                  {{ $branch->location?->full_address ?: 'No location set' }}
                 </span>
               </td>
 
