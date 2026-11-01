@@ -19,7 +19,7 @@ class AreaImportService
     {
         $handle = $this->open($file);
         $header = fgetcsv($handle, 0, ',');
-        $header = array_map(fn ($value) => trim((string) $value), $header ?: []);
+        $header = $this->normaliseHeader($header ?: []);
 
         if ($header !== self::HEADERS) {
             fclose($handle);
@@ -130,6 +130,16 @@ class AreaImportService
             'verified' => $row['verified'],
             'notes' => $row['notes'],
         ];
+    }
+
+    private function normaliseHeader(array $header): array
+    {
+        $header = array_map(fn ($value) => trim((string) $value), $header);
+        if (isset($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+        }
+
+        return $header;
     }
 
     private function findExisting(int $cityId, array $row): ?Area

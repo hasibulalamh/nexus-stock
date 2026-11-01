@@ -90,7 +90,10 @@ class LocationController extends Controller
     {
         $expected = ['division_bn', 'division_en', 'district_bn', 'district_en', 'upazila_bn', 'upazila_en', 'postcode', 'postcode_status'];
         $handle = fopen($path, 'r');
-        $header = array_map(fn ($value) => trim((string) $value, " \t\n\r\0\x0B\xEF\xBB\xBF"), fgetcsv($handle, 0, ',') ?: []);
+        $header = array_map(fn ($value) => trim((string) $value), fgetcsv($handle, 0, ',') ?: []);
+        if (isset($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+        }
         if ($header !== $expected) {
             fclose($handle);
 

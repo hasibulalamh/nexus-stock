@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Services\AreaImportService;
 use Database\Seeders\AreaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -106,6 +108,59 @@ class AreasFeatureTest extends TestCase
         $this->assertSame(0, Area::count());
     }
 
+    public function test_bom_prefixed_csv_previews_and_imports_successfully(): void
+    {
+        $path = $this->csvPath($this->csvRow('Dhaka'));
+        file_put_contents($path, "\xEF\xBB\xBF".file_get_contents($path));
+
+        try {
+            $service = app(AreaImportService::class);
+            $preview = $service->analyse($path);
+            $this->assertSame([], $preview['errors']);
+            $service->apply($path);
+        } finally {
+            unlink($path);
+        }
+
+        $this->assertSame(1, Area::count());
+    }
+
+    public function test_crlf_csv_previews_and_imports_successfully(): void
+    {
+        $path = $this->csvPath($this->csvRow('Dhaka'));
+        file_put_contents($path, str_replace("\n", "\r\n", file_get_contents($path)));
+
+        try {
+            $service = app(AreaImportService::class);
+            $preview = $service->analyse($path);
+            $this->assertSame([], $preview['errors']);
+            $service->apply($path);
+        } finally {
+            unlink($path);
+        }
+
+        $this->assertSame(1, Area::count());
+    }
+
+    public function test_legacy_location_import_accepts_a_bom_prefixed_header(): void
+    {
+        Storage::fake('local');
+        $states = \App\Models\State::count();
+        $cities = City::count();
+        $upazilas = Upazila::count();
+        $contents = "\xEF\xBB\xBFdivision_bn,division_en,district_bn,district_en,upazila_bn,upazila_en,postcode,postcode_status\r\n"
+            ."ঢাকা,Dhaka,ঢাকা,Dhaka,গুলশান,Gulshan,1212,VERIFIED\r\n";
+
+        $response = $this->actingAs($this->superadmin)->post(route('admin.locations.store'), [
+            'csv_file' => UploadedFile::fake()->createWithContent('locations.csv', $contents),
+        ]);
+
+        $response->assertOk()->assertViewIs('admin.location.create')->assertViewHas('preview');
+        $this->assertSame($states, \App\Models\State::count());
+        $this->assertSame($cities, City::count());
+        $this->assertSame($upazilas, Upazila::count());
+    }
+
     public function test_unknown_city_is_reported_without_creating_location_hierarchy(): void
     {
         $path = $this->csvPath($this->csvRow('Unknown City'));
@@ -175,11 +230,8 @@ class AreasFeatureTest extends TestCase
             return;
         }
 
-        $handle = fopen($path, 'r');
-        $header = array_map(fn ($value) => trim((string) $value, " \t\n\r\0\x0B\xEF\xBB\xBF"), fgetcsv($handle, 0, ',') ?: []);
-        fclose($handle);
-
-        $this->assertSame(AreaImportService::HEADERS, $header);
+        $preview = app(AreaImportService::class)->analyse($path);
+        $this->assertSame([], $preview['errors']);
     }
 
     private function makeUser(string $name, array $permissions): User
