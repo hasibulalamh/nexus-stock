@@ -3,33 +3,34 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Country;
-use App\Models\State;
 use App\Models\City;
+use App\Models\Country;
 use App\Models\Location;
+use App\Models\State;
 use App\Models\Upazila;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class LocationController extends Controller
 {
-    //list
+    // list
     public function list()
     {
         $locations = Location::with('country', 'state', 'city', 'upazila')->paginate(20);
+
         return view('admin.location.list', compact('locations'));
     }
-    //create
+
+    // create
     public function create()
     {
         return view('admin.location.create');
     }
 
-
-    //store
+    // store
     public function store(Request $request)
     {
         $validation = Validator::make($request->all(), [
@@ -44,10 +45,12 @@ class LocationController extends Controller
         $preview = $this->analyseImport(Storage::path($path));
         if ($preview['errors']) {
             Storage::delete($path);
+
             return back()->withErrors(['csv_file' => implode(' ', $preview['errors'])]);
         }
 
         session(['location_import_path' => $path]);
+
         return view('admin.location.create', compact('preview'));
     }
 
@@ -69,7 +72,9 @@ class LocationController extends Controller
                 $state = State::firstOrCreate(['name' => $divisionEn, 'country_id' => $country->id], ['code' => Str::upper(Str::substr($divisionEn, 0, 3)).'-'.Str::random(3, '0123456789'), 'slug' => Str::slug($divisionEn)]);
                 $city = City::firstOrCreate(['name' => $districtEn, 'state_id' => $state->id], ['code' => Str::upper(Str::substr($districtEn, 0, 3)).'-'.Str::random(3, '0123456789'), 'slug' => Str::slug($districtEn.'-'.$state->id)]);
                 $upazila = Upazila::firstOrCreate(['name' => $upazilaEn, 'city_id' => $city->id], ['code' => Str::upper(Str::substr($upazilaEn, 0, 3)).'-'.Str::random(3, '0123456789'), 'slug' => Str::slug($upazilaEn)]);
-                if ($postcode) $upazila->update(['postcode' => $postcode]);
+                if ($postcode) {
+                    $upazila->update(['postcode' => $postcode]);
+                }
                 Location::firstOrCreate(['country_id' => $country->id, 'state_id' => $state->id, 'city_id' => $city->id, 'upazila_id' => $upazila->id], ['status' => 'active']);
             }
             fclose($handle);
@@ -77,6 +82,7 @@ class LocationController extends Controller
 
         Storage::delete($path);
         session()->forget('location_import_path');
+
         return redirect()->route('admin.locations.list')->with('success', 'Locations imported successfully.');
     }
 
@@ -87,26 +93,54 @@ class LocationController extends Controller
         $header = array_map(fn ($value) => trim((string) $value, " \t\n\r\0\x0B\xEF\xBB\xBF"), fgetcsv($handle, 0, ',') ?: []);
         if ($header !== $expected) {
             fclose($handle);
+
             return ['rows' => 0, 'new_states' => 0, 'new_cities' => 0, 'new_upazilas' => 0, 'errors' => ['CSV header does not match the expected columns exactly.']];
         }
-        $rows = 0; $states = []; $cities = []; $upazilas = [];
+        $rows = 0;
+        $states = [];
+        $cities = [];
+        $upazilas = [];
         while (($data = fgetcsv($handle, 0, ',')) !== false) {
-            if (!filled(implode('', $data))) continue;
+            if (! filled(implode('', $data))) {
+                continue;
+            }
             $rows++;
             [$divisionBn, $divisionEn, $districtBn, $districtEn, $upazilaBn, $upazilaEn] = array_pad($data, 6, null);
-            if (!$divisionEn || !$districtEn || !$upazilaEn) return ['rows' => $rows, 'new_states' => 0, 'new_cities' => 0, 'new_upazilas' => 0, 'errors' => ["Row {$rows}: division, district, and upazila English names are required."]];
-            $states["{$divisionEn}"] = true; $cities["{$divisionEn}|{$districtEn}"] = true; $upazilas["{$districtEn}|{$upazilaEn}"] = true;
+            if (! $divisionEn || ! $districtEn || ! $upazilaEn) {
+                return ['rows' => $rows, 'new_states' => 0, 'new_cities' => 0, 'new_upazilas' => 0, 'errors' => ["Row {$rows}: division, district, and upazila English names are required."]];
+            }
+            $states["{$divisionEn}"] = true;
+            $cities["{$divisionEn}|{$districtEn}"] = true;
+            $upazilas["{$districtEn}|{$upazilaEn}"] = true;
         }
         fclose($handle);
-        return ['rows' => $rows, 'new_states' => count(array_filter($states, fn ($key) => !State::where('name', $key)->exists(), ARRAY_FILTER_USE_KEY)), 'new_cities' => count($cities), 'new_upazilas' => count($upazilas), 'errors' => []];
-    }
+        $country = Country::where('name', 'Bangladesh')->first();
+        $newStates = collect(array_keys($states))->filter(fn ($name) => ! $country || ! State::where('country_id', $country->id)->where('name', $name)->exists())->count();
+        $newCities = 0;
+        foreach (array_keys($cities) as $key) {
+            [$division, $district] = explode('|', $key, 2);
+            $state = $country ? State::where('country_id', $country->id)->where('name', $division)->first() : null;
+            if (! $state || ! City::where('state_id', $state->id)->where('name', $district)->exists()) {
+                $newCities++;
+            }
+        }
+        $newUpazilas = 0;
+        foreach (array_keys($upazilas) as $key) {
+            [$district, $upazila] = explode('|', $key, 2);
+            $city = City::where('name', $district)->first();
+            if (! $city || ! Upazila::where('city_id', $city->id)->where('name', $upazila)->exists()) {
+                $newUpazilas++;
+            }
+        }
 
+        return ['rows' => $rows, 'new_states' => $newStates, 'new_cities' => $newCities, 'new_upazilas' => $newUpazilas, 'errors' => []];
+    }
 
     public function changeStatus(Request $request)
     {
         $location = Location::find($request->id);
 
-        if (!$location) {
+        if (! $location) {
             return response()->json(['success' => false, 'message' => 'Location not found!']);
         }
 
@@ -116,9 +150,7 @@ class LocationController extends Controller
         return response()->json([
             'success' => true,
             'status' => $location->status,
-            'message' => 'Status updated successfully!'
+            'message' => 'Status updated successfully!',
         ]);
     }
-
-
 }
