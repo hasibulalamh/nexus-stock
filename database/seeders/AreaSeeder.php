@@ -8,9 +8,13 @@ use Illuminate\Support\Facades\File;
 
 class AreaSeeder extends Seeder
 {
+    public function __construct(private readonly ?string $fixturePath = null)
+    {
+    }
+
     public function run(AreaImportService $importer): void
     {
-        $path = base_path('database/data/areas_dhaka.csv');
+        $path = $this->fixturePath ?: base_path('database/data/areas_dhaka.csv');
         if (!File::exists($path)) {
             $this->command?->warn("Area CSV not found at {$path} - skipping area seed.");
             return;

@@ -148,11 +148,11 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::delete('delete/{id}', [WarehouseController::class, 'delete'])->middleware('can:warehouses.delete')->name('delete');
 
         // location data
-        Route::get('get-states/{countryId}', [WarehouseController::class, 'getStates'])->middleware('can:warehouses.create|warehouses.edit');
-        Route::get('get-cities/{stateId}', [WarehouseController::class, 'getCities'])->middleware('can:warehouses.create|warehouses.edit');
-        Route::get('get-upazilas/{cityId}', [WarehouseController::class, 'getUpazilas'])->middleware('can:warehouses.create|warehouses.edit');
-        Route::get('get-zipcode/{upazilaId}', [WarehouseController::class, 'getZipcode'])->middleware('can:warehouses.create|warehouses.edit');
-        Route::get('get-areas/{cityId}', [WarehouseController::class, 'getAreas'])->middleware('can:warehouses.create|warehouses.edit');
+        Route::get('get-states/{countryId}', [WarehouseController::class, 'getStates'])->middleware('permission:warehouses.create|warehouses.edit');
+        Route::get('get-cities/{stateId}', [WarehouseController::class, 'getCities'])->middleware('permission:warehouses.create|warehouses.edit');
+        Route::get('get-upazilas/{cityId}', [WarehouseController::class, 'getUpazilas'])->middleware('permission:warehouses.create|warehouses.edit');
+        Route::get('get-zipcode/{upazilaId}', [WarehouseController::class, 'getZipcode'])->middleware('permission:warehouses.create|warehouses.edit');
+        Route::get('get-areas/{cityId}', [WarehouseController::class, 'getAreas'])->middleware('permission:warehouses.create|warehouses.edit');
     });
 
     // branch
@@ -165,10 +165,10 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::delete('delete/{id}', [BranchController::class, 'delete'])->middleware('can:branches.delete')->name('delete');
 
         // location data
-        Route::get('get-states/{countryId}', [BranchController::class, 'getStates'])->middleware('can:branches.create|branches.edit');
-        Route::get('get-cities/{stateId}', [BranchController::class, 'getCities'])->middleware('can:branches.create|branches.edit');
-        Route::get('get-upazilas/{cityId}', [BranchController::class, 'getUpazilas'])->middleware('can:branches.create|branches.edit');
-        Route::get('get-zipcode/{upazilaId}', [BranchController::class, 'getZipcode'])->middleware('can:branches.create|branches.edit');
-        Route::get('get-areas/{cityId}', [BranchController::class, 'getAreas'])->middleware('can:branches.create|branches.edit');
+        Route::get('get-states/{countryId}', [BranchController::class, 'getStates'])->middleware('permission:branches.create|branches.edit');
+        Route::get('get-cities/{stateId}', [BranchController::class, 'getCities'])->middleware('permission:branches.create|branches.edit');
+        Route::get('get-upazilas/{cityId}', [BranchController::class, 'getUpazilas'])->middleware('permission:branches.create|branches.edit');
+        Route::get('get-zipcode/{upazilaId}', [BranchController::class, 'getZipcode'])->middleware('permission:branches.create|branches.edit');
+        Route::get('get-areas/{cityId}', [BranchController::class, 'getAreas'])->middleware('permission:branches.create|branches.edit');
     });
 });

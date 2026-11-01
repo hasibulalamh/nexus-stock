@@ -6,6 +6,10 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Department;
 use App\Models\Designation;
+use App\Models\Country;
+use App\Models\State;
+use App\Models\City;
+use App\Models\Upazila;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -25,6 +29,32 @@ class CrudValidationTest extends TestCase
         $this->seed(\Database\Seeders\PermissionSeeder::class);
         $this->seed(\Database\Seeders\AdminSeeder::class);
         $this->admin = User::where('email', 'superadmin@storify.com')->firstOrFail();
+    }
+
+    private function createLocationHierarchy(): array
+    {
+        $country = Country::create(['name' => 'Bangladesh', 'code' => 'BD', 'slug' => 'bangladesh']);
+        $state = State::create([
+            'name' => 'Dhaka Division',
+            'code' => 'DHK',
+            'slug' => 'dhaka-division',
+            'country_id' => $country->id,
+        ]);
+        $city = City::create([
+            'name' => 'Dhaka',
+            'code' => 'DHK-CITY',
+            'slug' => 'dhaka',
+            'state_id' => $state->id,
+        ]);
+        $upazila = Upazila::create([
+            'name' => 'Gulshan',
+            'code' => 'GUL',
+            'slug' => 'gulshan',
+            'city_id' => $city->id,
+            'postcode' => '1212',
+        ]);
+
+        return compact('country', 'state', 'city', 'upazila');
     }
 
     // ========================= DEPARTMENT TESTS =========================
@@ -211,14 +241,15 @@ class CrudValidationTest extends TestCase
 
     public function test_branch_location_details_are_saved_and_updated(): void
     {
+        $hierarchy = $this->createLocationHierarchy();
         $data = [
             'name' => 'Detailed Branch',
             'code' => 'DETAIL-BRANCH',
             'slug' => 'detail-branch',
-            'country_id' => 1,
-            'state_id' => 2,
-            'city_id' => 3,
-            'upazila_id' => 4,
+            'country_id' => $hierarchy['country']->id,
+            'state_id' => $hierarchy['state']->id,
+            'city_id' => $hierarchy['city']->id,
+            'upazila_id' => $hierarchy['upazila']->id,
             'area' => 'Mirpur-10',
             'address_line' => 'House 12, Road 3, Block C',
             'capacity' => 100,
@@ -233,7 +264,7 @@ class CrudValidationTest extends TestCase
         $location = $branch->location;
         $this->assertSame('Mirpur-10', $location->area);
         $this->assertSame('House 12, Road 3, Block C', $location->address_line);
-        $this->assertSame('House 12, Road 3, Block C, Mirpur-10', $location->full_address);
+        $this->assertSame('House 12, Road 3, Block C, Mirpur-10, Gulshan, Dhaka, Dhaka Division, Bangladesh, 1212', $location->full_address);
 
         $this->actingAs($this->admin)->put(route('admin.branch.update', $branch->id), [
             ...$data,
@@ -248,14 +279,15 @@ class CrudValidationTest extends TestCase
 
     public function test_branch_location_details_are_optional_and_length_validated(): void
     {
+        $hierarchy = $this->createLocationHierarchy();
         $data = [
             'name' => 'Plain Branch',
             'code' => 'PLAIN-BRANCH',
             'slug' => 'plain-branch',
-            'country_id' => 1,
-            'state_id' => 2,
-            'city_id' => 3,
-            'upazila_id' => 4,
+            'country_id' => $hierarchy['country']->id,
+            'state_id' => $hierarchy['state']->id,
+            'city_id' => $hierarchy['city']->id,
+            'upazila_id' => $hierarchy['upazila']->id,
             'capacity' => 100,
             'starting_date' => '2026-01-01',
             'status' => 'active',
@@ -266,7 +298,7 @@ class CrudValidationTest extends TestCase
         $plainBranch = \App\Models\Branch::where('code', 'PLAIN-BRANCH')->firstOrFail();
         $this->assertNull($plainBranch->location->area);
         $this->assertNull($plainBranch->location->address_line);
-        $this->assertSame('', $plainBranch->location->full_address);
+        $this->assertSame('Gulshan, Dhaka, Dhaka Division, Bangladesh, 1212', $plainBranch->location->full_address);
 
         $response = $this->actingAs($this->admin)
             ->from(route('admin.branch.create'))
@@ -280,6 +312,52 @@ class CrudValidationTest extends TestCase
 
         $response->assertSessionHasErrors(['area', 'address_line']);
         $this->assertDatabaseMissing('branches', ['code' => 'TOO-LONG']);
+    }
+
+    public function test_branch_rejects_an_invalid_upazila_id_without_server_error(): void
+    {
+        $hierarchy = $this->createLocationHierarchy();
+        $response = $this->actingAs($this->admin)
+            ->from(route('admin.branch.create'))
+            ->post(route('admin.branch.store'), [
+                'name' => 'Invalid Upazila Branch',
+                'code' => 'INVALID-UPAZILA',
+                'slug' => 'invalid-upazila',
+                'country_id' => $hierarchy['country']->id,
+                'state_id' => $hierarchy['state']->id,
+                'city_id' => $hierarchy['city']->id,
+                'upazila_id' => 999999,
+                'capacity' => 100,
+                'starting_date' => '2026-01-01',
+                'status' => 'active',
+            ]);
+
+        $response->assertRedirect(route('admin.branch.create'));
+        $response->assertSessionHasErrors('upazila_id');
+        $this->assertDatabaseMissing('branches', ['code' => 'INVALID-UPAZILA']);
+    }
+
+    public function test_warehouse_rejects_an_invalid_upazila_id_without_server_error(): void
+    {
+        $hierarchy = $this->createLocationHierarchy();
+        $response = $this->actingAs($this->admin)
+            ->from(route('admin.warehouse.create'))
+            ->post(route('admin.warehouse.store'), [
+                'name' => 'Invalid Upazila Warehouse',
+                'code' => 'INVALID-UPAZILA-W',
+                'slug' => 'invalid-upazila-warehouse',
+                'country_id' => $hierarchy['country']->id,
+                'state_id' => $hierarchy['state']->id,
+                'city_id' => $hierarchy['city']->id,
+                'upazila_id' => 999999,
+                'capacity' => 100,
+                'starting_date' => '2026-01-01',
+                'status' => 'active',
+            ]);
+
+        $response->assertRedirect(route('admin.warehouse.create'));
+        $response->assertSessionHasErrors('upazila_id');
+        $this->assertDatabaseMissing('warehouses', ['code' => 'INVALID-UPAZILA-W']);
     }
 
     public function test_user_edit_is_available_when_branch_and_warehouse_are_assigned(): void
