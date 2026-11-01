@@ -1,4 +1,4 @@
-﻿osm_id,area,area_bn,type,osm_place,lat,lng,city,thana_hint,source,verified,notes
+osm_id,area,area_bn,type,osm_place,lat,lng,city,thana_hint,source,verified,notes
 9169004934,1st Colony,১ম কলোনী,section,quarter,23.786195,90.346896,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 9227024282,2nd Colony,২য় কলোনী,section,quarter,23.792350,90.348391,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 9227024281,3rd Colony,৩য় কলোনী,section,quarter,23.788818,90.344887,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
