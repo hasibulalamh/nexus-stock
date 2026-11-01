@@ -11,6 +11,7 @@ class Location extends Model
         'state_id',
         'city_id',
         'upazila_id',
+        'area_id',
         'area',
         'address_line',
         'status',
@@ -46,6 +47,10 @@ class Location extends Model
     public function upazila()
     {
         return $this->belongsTo(Upazila::class);
+    }
+    public function area()
+    {
+        return $this->belongsTo(Area::class);
     }
     public function warehouse()
     {

@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             PermissionSeeder::class,
             BangladeshLocationSeeder::class,
+            AreaSeeder::class,
         ]);
 
         // User::factory(10)->create();

@@ -22,6 +22,7 @@ class PermissionSeeder extends Seeder
             'departments'  => ['view', 'create', 'edit', 'delete'],
             'designations' => ['view', 'create', 'edit', 'delete'],
             'locations'    => ['view', 'create', 'status'],
+            'areas'        => ['view', 'create', 'edit', 'delete', 'import'],
             'warehouses'   => ['view', 'create', 'edit', 'delete'],
             'branches'     => ['view', 'create', 'edit', 'delete'],
             'categories'   => ['view', 'create', 'edit', 'delete'],
