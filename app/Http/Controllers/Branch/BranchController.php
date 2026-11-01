@@ -13,6 +13,8 @@ use App\Models\Upazila;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Area;
+use App\Services\LocationIdentityService;
 
 class BranchController extends Controller
 {
@@ -22,7 +24,7 @@ class BranchController extends Controller
         $branches = Branch::accessibleTo(auth()->user())->with('location.country',
         'location.state',
         'location.city',
-        'location.upazila')->paginate(10);
+        'location.upazila', 'location.area')->paginate(10);
         return view('admin.branch.list', compact('branches'));
     }
 
@@ -44,7 +46,8 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
-            'upazila_id' => 'required',
+            'upazila_id' => 'nullable',
+            'area_id' => 'nullable|exists:areas,id',
             'area' => 'nullable|string|max:120',
             'address_line' => 'nullable|string|max:255',
             'capacity' => 'required',
@@ -57,25 +60,15 @@ class BranchController extends Controller
         }
 
         //find location id
-        $location = Location::where([
-            'country_id' => $request->country_id,
-            'state_id' => $request->state_id,
-            'city_id' => $request->city_id,
-            'upazila_id' => $request->upazila_id,
-            'area' => $request->area,
-            'address_line' => $request->address_line,
-        ])->first();
-
-        if(!$location){
-            $location = Location::create([
+        $location = app(LocationIdentityService::class)->findOrCreate([
                 'country_id' => $request->country_id,
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
                 'upazila_id' => $request->upazila_id,
+                'area_id' => $request->area_id,
                 'area' => $request->area,
                 'address_line' => $request->address_line,
-            ]);
-        }
+        ]);
 
         $branch = Branch::create([
             'name' => $request->name,
@@ -108,7 +101,8 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
-            'upazila_id' => 'required',
+            'upazila_id' => 'nullable',
+            'area_id' => 'nullable|exists:areas,id',
             'area' => 'nullable|string|max:120',
             'address_line' => 'nullable|string|max:255',
             'capacity' => 'required',
@@ -119,25 +113,15 @@ class BranchController extends Controller
         if($validation->fails()){
             return redirect()->back()->withErrors($validation)->withInput();
         }//find location id
-        $location = Location::where([
-            'country_id' => $request->country_id,
-            'state_id' => $request->state_id,
-            'city_id' => $request->city_id,
-            'upazila_id' => $request->upazila_id,
-            'area' => $request->area,
-            'address_line' => $request->address_line,
-        ])->first();
-
-        if(!$location){
-            $location = Location::create([
+        $location = app(LocationIdentityService::class)->findOrCreate([
                 'country_id' => $request->country_id,
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
                 'upazila_id' => $request->upazila_id,
+                'area_id' => $request->area_id,
                 'area' => $request->area,
                 'address_line' => $request->address_line,
-            ]);
-        }
+        ]);
 
         //queary
         $branch->update([
@@ -183,6 +167,16 @@ class BranchController extends Controller
         return response()->json([
             'zipcode' => $upazila?->postcode ?? ''
         ]);
+    }
+
+    public function getAreas(Request $request, $cityId)
+    {
+        return response()->json(Area::active()->where('city_id', $cityId)
+            ->when($request->upazila_id, fn ($query, $id) => $query->where(function ($query) use ($id) {
+                $query->whereNull('upazila_id')->orWhere('upazila_id', $id);
+            }))->orderBy('name')->get()->map(fn (Area $area) => [
+                'id' => $area->id, 'display_name' => $area->display_name,
+            ]));
     }
 
 }

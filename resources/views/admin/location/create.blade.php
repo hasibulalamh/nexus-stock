@@ -35,11 +35,13 @@
           <button type="reset" class="btn btn-outline-secondary">
             <i class="fas fa-rotate-left"></i> Reset
           </button>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-file-upload"></i> Import Locations
-          </button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-file-upload"></i> Preview Import</button>
         </div>
       </form>
+      @isset($preview)
+        <hr><p>Rows: {{ $preview['rows'] }}, new states: {{ $preview['new_states'] }}, new cities: {{ $preview['new_cities'] }}, new upazilas: {{ $preview['new_upazilas'] }}</p>
+        <form action="{{ route('admin.locations.import.apply') }}" method="POST">@csrf<button class="btn btn-success">Confirm and apply</button></form>
+      @endisset
     </div>
   </div>
 </div>

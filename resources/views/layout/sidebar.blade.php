@@ -24,7 +24,7 @@
         @endcan
 
         {{-- ===== administration ===== --}}
-        @canany(['roles.view', 'permissions.view', 'users.view', 'departments.view', 'designations.view', 'locations.view'])
+        @canany(['roles.view', 'permissions.view', 'users.view', 'departments.view', 'designations.view', 'locations.view', 'areas.view'])
             <span class="ns-group">Administration</span>
             <ul class="ns-nav">
                 @can('users.view')
@@ -85,6 +85,14 @@
                            href="{{ route('admin.locations.list') }}">
                             <span class="ns-ico"><i class="fas fa-map-location-dot"></i></span>
                             <span>Locations</span><i class="ns-dot"></i>
+                        </a>
+                    </li>
+                @endcan
+                @can('areas.view')
+                    <li>
+                        <a class="ns-link {{ request()->routeIs('admin.areas.*') ? 'active' : '' }}" href="{{ route('admin.areas.list') }}">
+                            <span class="ns-ico"><i class="fas fa-map-pin"></i></span>
+                            <span>Areas</span><i class="ns-dot"></i>
                         </a>
                     </li>
                 @endcan

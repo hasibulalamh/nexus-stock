@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\LoginController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\AreaController;
 use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Warehouse\WarehouseController;
 use Illuminate\Support\Facades\Auth;
@@ -88,7 +89,21 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('list', [LocationController::class, 'list'])->middleware('can:locations.view')->name('list');
         Route::get('create', [LocationController::class, 'create'])->middleware('can:locations.create')->name('create');
         Route::post('store', [LocationController::class, 'store'])->middleware('can:locations.create')->name('store');
+        Route::post('import/apply', [LocationController::class, 'applyImport'])->middleware('can:locations.create')->name('import.apply');
         Route::post('change-status', [LocationController::class, 'changeStatus'])->middleware('can:locations.status')->name('changeStatus');
+    });
+
+    Route::group(['prefix' => 'areas', 'as' => 'areas.'], function () {
+        Route::get('list', [AreaController::class, 'index'])->middleware('can:areas.view')->name('list');
+        Route::get('create', [AreaController::class, 'create'])->middleware('can:areas.create')->name('create');
+        Route::post('store', [AreaController::class, 'store'])->middleware('can:areas.create')->name('store');
+        Route::get('edit/{area}', [AreaController::class, 'edit'])->middleware('can:areas.edit')->name('edit');
+        Route::put('update/{area}', [AreaController::class, 'update'])->middleware('can:areas.edit')->name('update');
+        Route::delete('delete/{area}', [AreaController::class, 'destroy'])->middleware('can:areas.delete')->name('delete');
+        Route::patch('status/{area}', [AreaController::class, 'toggleStatus'])->middleware('can:areas.edit')->name('status');
+        Route::get('import', [AreaController::class, 'import'])->middleware('can:areas.import')->name('import');
+        Route::post('import/preview', [AreaController::class, 'preview'])->middleware('can:areas.import')->name('import.preview');
+        Route::post('import/apply', [AreaController::class, 'applyImport'])->middleware('can:areas.import')->name('import.apply');
     });
 
     // category
@@ -137,6 +152,7 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('get-cities/{stateId}', [WarehouseController::class, 'getCities'])->middleware('can:warehouses.create|warehouses.edit');
         Route::get('get-upazilas/{cityId}', [WarehouseController::class, 'getUpazilas'])->middleware('can:warehouses.create|warehouses.edit');
         Route::get('get-zipcode/{upazilaId}', [WarehouseController::class, 'getZipcode'])->middleware('can:warehouses.create|warehouses.edit');
+        Route::get('get-areas/{cityId}', [WarehouseController::class, 'getAreas'])->middleware('can:warehouses.create|warehouses.edit');
     });
 
     // branch
@@ -153,5 +169,6 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('get-cities/{stateId}', [BranchController::class, 'getCities'])->middleware('can:branches.create|branches.edit');
         Route::get('get-upazilas/{cityId}', [BranchController::class, 'getUpazilas'])->middleware('can:branches.create|branches.edit');
         Route::get('get-zipcode/{upazilaId}', [BranchController::class, 'getZipcode'])->middleware('can:branches.create|branches.edit');
+        Route::get('get-areas/{cityId}', [BranchController::class, 'getAreas'])->middleware('can:branches.create|branches.edit');
     });
 });

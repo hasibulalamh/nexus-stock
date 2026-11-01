@@ -86,12 +86,16 @@
           </div>
 
           <div class="col-12 col-md-4">
-            <label class="form-label required" for="upazila">Upazila</label>
-            <select id="upazila" name="upazila_id" class="form-select @error('upazila_id') is-invalid @enderror" required></select>
+            <label class="form-label" for="upazila">Upazila (optional)</label>
+            <select id="upazila" name="upazila_id" class="form-select @error('upazila_id') is-invalid @enderror"><option value="">-- Select Upazila --</option></select>
             @error('upazila_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="area_id">Area (from list)</label>
+            <select id="area_id" name="area_id" class="form-select @error('area_id') is-invalid @enderror"><option value="">-- Area not in list --</option></select>
+          </div>
+          <div class="col-12 col-md-4">
             <label class="form-label" for="area">Area (optional, e.g. Mirpur-10)</label>
             <input type="text" id="area" name="area" value="{{ old('area') }}"
                    class="form-control @error('area') is-invalid @enderror">
@@ -161,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
     stateId: 'state',
     cityId: 'city',
     upazilaId: 'upazila',
+    areaId: 'area_id',
     baseUrl: '{{ url("admin/branch") }}'
   });
 
