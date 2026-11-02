@@ -133,6 +133,40 @@
             </ul>
         @endcanany
 
+        @canany(['stock.view', 'stock.movements.view', 'stock.alerts.view', 'stock.opening'])
+            <span class="ns-group">Stock</span>
+            <ul class="ns-nav">
+                @can('stock.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.stock.levels') ? 'active' : '' }}" href="{{ route('admin.stock.levels') }}">
+                        <span class="ns-ico"><i class="fas fa-layer-group"></i></span><span>Stock levels</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('stock.movements.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.stock.movements') ? 'active' : '' }}" href="{{ route('admin.stock.movements') }}">
+                        <span class="ns-ico"><i class="fas fa-right-left"></i></span><span>Movements</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('stock.alerts.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.stock.alerts') ? 'active' : '' }}" href="{{ route('admin.stock.alerts') }}">
+                        <span class="ns-ico"><i class="fas fa-triangle-exclamation"></i></span><span>Alerts</span>
+                        @php($openStockAlerts = \App\Models\StockAlert::query()->where('status', 'open')->when(!auth()->user()->hasAccessAll() && !auth()->user()->can('stock.alerts.view_all'), function ($q) {
+                            $q->where(function ($scope) {
+                                $scope->whereIn('branch_id', auth()->user()->accessibleBranchIds() ?: [])
+                                    ->orWhereIn('warehouse_id', auth()->user()->accessibleWarehouseIds() ?: []);
+                            });
+                        })->count())
+                        @if($openStockAlerts)<span class="badge bg-danger ms-auto">{{ $openStockAlerts }}</span>@endif
+                        <i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('stock.opening')
+                    <li><a class="ns-link {{ request()->routeIs('admin.stock.opening') ? 'active' : '' }}" href="{{ route('admin.stock.opening') }}">
+                        <span class="ns-ico"><i class="fas fa-boxes-stacked"></i></span><span>Opening stock</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+            </ul>
+        @endcanany
+
         {{-- ===== modules ===== --}}
         @canany(['warehouses.view', 'branches.view'])
             <span class="ns-group">Modules</span>
