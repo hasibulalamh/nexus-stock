@@ -30,7 +30,7 @@ class Product extends Model
     protected $casts = [
         'cost_price' => 'decimal:2',
         'selling_price' => 'decimal:2',
-        'reorder_level' => 'integer',
+        'reorder_level' => 'decimal:3',
         'track_stock' => 'boolean',
     ];
 

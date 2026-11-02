@@ -126,8 +126,9 @@
           <div class="col-md-4">
             <label class="form-label" for="reorder_level">Reorder Level</label>
             <input type="number" name="reorder_level" id="reorder_level" value="{{ old('reorder_level', $product->reorder_level) }}"
-                   class="form-control @error('reorder_level') is-invalid @enderror" min="0">
+                   class="form-control @error('reorder_level') is-invalid @enderror" min="0" step="0.001">
             <small class="text-muted">Stock level at which to trigger reorder.</small>
+            @error('reorder_level')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
           </div>
 
           <div class="col-md-4">

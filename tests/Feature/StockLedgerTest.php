@@ -341,7 +341,9 @@ class StockLedgerTest extends TestCase
         StockMovement::query()->where('id', 2)->update(['balance_after' => '99.000']);
 
         $this->assertSame(1, Artisan::call('stock:rebuild', ['--dry-run' => true]));
-        $this->assertSame(0, Artisan::call('stock:rebuild'));
+        $this->assertSame(1, Artisan::call('stock:rebuild'));
+        $this->assertSame('99.000', StockMovement::find(2)->balance_after);
+        $this->assertSame(0, Artisan::call('stock:rebuild', ['--repair-chain' => true]));
         $this->assertSame('1.000', StockLevel::firstOrFail()->quantity);
         $this->assertSame('1.000', StockMovement::find(2)->balance_after);
     }
@@ -371,6 +373,56 @@ class StockLedgerTest extends TestCase
         $sum = StockMovement::sum('quantity_delta');
         $this->assertSame($this->formatTestQuantity($expected), $level->quantity);
         $this->assertSame($this->formatTestQuantity($expected), number_format((float) $sum, 3, '.', ''));
+    }
+
+    public function test_threshold_override_and_minimum_endpoint_are_validated_and_logged(): void
+    {
+        $product = $this->product();
+        $product->update(['reorder_level' => '5.000']);
+        $branch = $this->branch('Threshold Branch');
+        $level = StockLevel::create([
+            'product_id' => $product->id,
+            'location_type' => 'branch',
+            'location_id' => $branch->id,
+            'quantity' => '4.000',
+        ]);
+        $user = $this->userWithRole('Threshold User', ['stock.view', 'stock.thresholds']);
+        $user->branches()->attach($branch->id);
+
+        $this->actingAs($user)->post(route('admin.stock.levels.minimum', $level), ['min_quantity' => '3.125'])
+            ->assertRedirect();
+        $this->assertSame('3.125', $level->fresh()->min_quantity);
+        $this->assertDatabaseHas('activity_log', ['subject_type' => StockLevel::class, 'subject_id' => $level->id]);
+
+        $this->actingAs($user)->post(route('admin.stock.levels.minimum', $level), ['min_quantity' => '3.1234'])
+            ->assertSessionHasErrors('min_quantity');
+        $this->assertSame('3.125', $level->fresh()->min_quantity);
+
+        $withoutPermission = $this->userWithRole('No Threshold Permission', ['stock.view']);
+        $withoutPermission->branches()->attach($branch->id);
+        $this->actingAs($withoutPermission)
+            ->post(route('admin.stock.levels.minimum', $level), ['min_quantity' => '2'])
+            ->assertForbidden();
+    }
+
+    public function test_effective_minimum_uses_override_then_product_and_can_be_null(): void
+    {
+        $product = $this->product();
+        $product->update(['reorder_level' => '5.000']);
+        $branch = $this->branch('Minimum Branch');
+        $level = StockLevel::create([
+            'product_id' => $product->id,
+            'location_type' => 'branch',
+            'location_id' => $branch->id,
+            'quantity' => '4.000',
+        ]);
+
+        $this->assertSame('5.000', $level->fresh()->effectiveMinimum());
+        $level->update(['min_quantity' => '2.500']);
+        $this->assertSame('2.500', $level->fresh()->effectiveMinimum());
+        $product->update(['reorder_level' => null]);
+        $level->update(['min_quantity' => null]);
+        $this->assertNull($level->fresh()->effectiveMinimum());
     }
 
     private function formatTestQuantity(int $thousandths): string

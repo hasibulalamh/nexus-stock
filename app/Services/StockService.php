@@ -118,9 +118,9 @@ class StockService
     /**
      * @return array{fixed:int,created:int,removed:int,mismatches:int}
      */
-    public function rebuildWithReport(bool $dryRun = false): array
+    public function rebuildWithReport(bool $dryRun = false, bool $repairChain = false): array
     {
-        $work = function () use ($dryRun): array {
+        $work = function () use ($dryRun, $repairChain): array {
             $expected = [];
             $mismatches = 0;
             $movements = StockMovement::query()->orderBy('product_id')->orderBy('location_type')
@@ -131,7 +131,7 @@ class StockService
                 $expected[$key] = ($expected[$key] ?? 0) + $this->toThousandths($movement->quantity_delta);
                 if ($this->toThousandths($movement->balance_after) !== $expected[$key]) {
                     $mismatches++;
-                    if (! $dryRun) {
+                    if (! $dryRun && $repairChain) {
                         DB::table('stock_movements')->where('id', $movement->id)
                             ->update(['balance_after' => $this->formatQuantity($expected[$key])]);
                     }

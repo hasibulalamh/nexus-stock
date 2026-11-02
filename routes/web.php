@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AreaController;
+use App\Http\Controllers\Admin\StockLevelController;
 use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Warehouse\WarehouseController;
 use Illuminate\Support\Facades\Auth;
@@ -104,6 +105,11 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('import', [AreaController::class, 'import'])->middleware('can:areas.import')->name('import');
         Route::post('import/preview', [AreaController::class, 'preview'])->middleware('can:areas.import')->name('import.preview');
         Route::post('import/apply', [AreaController::class, 'applyImport'])->middleware('can:areas.import')->name('import.apply');
+    });
+
+    Route::group(['prefix' => 'stock', 'as' => 'stock.'], function () {
+        Route::get('levels', [StockLevelController::class, 'index'])->middleware('can:stock.view')->name('levels');
+        Route::post('levels/{stockLevel}/minimum', [StockLevelController::class, 'setMinimum'])->middleware('can:stock.thresholds')->name('levels.minimum');
     });
 
     // category

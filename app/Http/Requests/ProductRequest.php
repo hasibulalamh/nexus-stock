@@ -48,7 +48,7 @@ class ProductRequest extends FormRequest
             'unit' => ['required', 'string', Rule::in(array_keys(config('inventory.units')))],
             'cost_price' => ['required', 'numeric', 'min:0'],
             'selling_price' => ['required', 'numeric', 'min:0'],
-            'reorder_level' => ['required', 'integer', 'min:0'],
+            'reorder_level' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'track_stock' => ['required', 'boolean'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
             'status' => ['required', 'in:active,inactive'],
