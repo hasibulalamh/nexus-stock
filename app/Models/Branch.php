@@ -10,6 +10,7 @@ class Branch extends Model
     use RecordsActivity;
     protected $fillable = [
         'location_id',
+        'warehouse_id',
         'name',
         'code',
         'slug',
@@ -27,6 +28,11 @@ class Branch extends Model
     public function users()
     {
         return $this->belongsToMany(User::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     /**

@@ -23,6 +23,7 @@
             <th scope="col" class="d-none d-md-table-cell">ID</th>
             <th scope="col">Warehouse</th>
             <th scope="col">Code</th>
+            <th scope="col" class="d-none d-lg-table-cell">Branches supplied</th>
             <th scope="col" class="d-none d-lg-table-cell">Location</th>
             <th scope="col" class="d-none d-md-table-cell">Capacity</th>
             <th scope="col">Status</th>
@@ -42,6 +43,8 @@
               </td>
 
               <td><span class="nx-code">{{ $warehouse->code }}</span></td>
+
+              <td class="d-none d-lg-table-cell">{{ $warehouse->branches_count }}</td>
 
               <td class="d-none d-lg-table-cell">
                 <span class="nx-user-sub text-truncate d-inline-block w-100" title="{{ $warehouse->location?->full_address ?: 'No location set' }}">
@@ -85,7 +88,7 @@
             </tr>
           @empty
             <tr>
-              <td colspan="7" class="nx-empty">
+              <td colspan="8" class="nx-empty">
                 <i class="fas fa-warehouse"></i>
                 <div class="nx-empty-title">No warehouses found</div>
                 <div class="nx-empty-sub">Add your first warehouse to get started.</div>

@@ -155,20 +155,6 @@
             @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="branch">Branch</label>
-            <select id="branch" name="branch_id" class="form-select @error('branch_id') is-invalid @enderror">
-              <option value="">-- Select Branch --</option>
-              @foreach($branches as $branch)
-                <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}
-                  {{ $warehouse->branch_id == $branch->id ? 'data-selected' : '' }}>
-                  {{ $branch->name }}
-                </option>
-              @endforeach
-            </select>
-            @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-          </div>
-
         </div>
 
         <div class="nx-form-actions">
@@ -206,20 +192,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('warehouse_slug').value = name.toLowerCase().replace(/\s+/g, '-');
   });
 
-  // Initialize branch select
-  const branchSelect = document.getElementById('branch');
-  // Optionally pre-select the warehouse's branch
-  const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
-  // Highlight the currently selected branch
-  {% if $warehouse->branch_id %}
-    // Set the selected option to match the warehouse's branch
-    for (let i = 0; i < branchSelect.options.length; i++) {
-      if (branchSelect.options[i].value == {{ $warehouse->branch_id }}) {
-        branchSelect.selectedIndex = i;
-        break;
-      }
-    }
-  {% endif %}
 });
 </script>
 @endsection

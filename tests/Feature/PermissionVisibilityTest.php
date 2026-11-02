@@ -147,11 +147,11 @@ class PermissionVisibilityTest extends TestCase
             'code' => 'SCOPED-WAREHOUSE',
             'slug' => 'scoped-warehouse',
             'location_id' => '1',
-            'branch_id' => $assignedBranch->id,
             'capacity' => '100',
             'starting_date' => '2026-01-01',
             'status' => 'active',
         ]);
+        $assignedBranch->update(['warehouse_id' => $assignedWarehouse->id]);
         Warehouse::create([
             'name' => 'Hidden Warehouse',
             'code' => 'HIDDEN-WAREHOUSE',

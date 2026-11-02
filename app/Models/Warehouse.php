@@ -13,7 +13,6 @@ class Warehouse extends Model
         'code',
         'slug',
         'location_id',
-        'branch_id',
         'capacity',
         'starting_date',
         'status',
@@ -29,9 +28,9 @@ class Warehouse extends Model
         return $this->belongsTo(Location::class);
     }
 
-    public function branch()
+    public function branches()
     {
-        return $this->belongsTo(Branch::class);
+        return $this->hasMany(Branch::class);
     }
 
     /** 
@@ -39,7 +38,6 @@ class Warehouse extends Model
      * Reuse this pattern for later models (stock, purchase, sale, transfer):
      * superadmin / access_all users keep the full query, everyone else is
      * limited to their assigned ids (an empty assignment yields no rows).
-     * Now also includes warehouses assigned via the warehouse's branch.
      */
     public function scopeAccessibleTo($query, User $user)
     {

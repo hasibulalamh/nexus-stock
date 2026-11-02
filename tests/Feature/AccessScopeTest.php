@@ -257,14 +257,14 @@ class AccessScopeTest extends TestCase
             ->assertDontSee('Alpha Branch');
     }
 
-    public function test_branch_assignment_grants_access_to_warehouses_on_that_branch(): void
+    public function test_branch_assignment_does_not_grant_access_to_warehouses(): void
     {
         $branch = $this->makeBranch('Assigned Branch');
         $otherBranch = $this->makeBranch('Other Branch');
         $assignedWarehouse = $this->makeWarehouse('Assigned Depot');
-        $assignedWarehouse->update(['branch_id' => $branch->id]);
+        $branch->update(['warehouse_id' => $assignedWarehouse->id]);
         $otherWarehouse = $this->makeWarehouse('Other Depot');
-        $otherWarehouse->update(['branch_id' => $otherBranch->id]);
+        $otherBranch->update(['warehouse_id' => $otherWarehouse->id]);
         $directWarehouse = $this->makeWarehouse('Direct Depot');
 
         $user = $this->makeUser('staff', [], ['warehouses.view', 'warehouses.edit']);
@@ -272,11 +272,11 @@ class AccessScopeTest extends TestCase
         $user->warehouses()->attach($directWarehouse->id);
 
         $this->assertEqualsCanonicalizing(
-            [$assignedWarehouse->id, $directWarehouse->id],
+            [$directWarehouse->id],
             $user->accessibleWarehouseIds()
         );
         $this->actingAs($user)->get(route('admin.warehouse.edit', $assignedWarehouse->id))
-            ->assertOk();
+            ->assertNotFound();
         $this->actingAs($user)->get(route('admin.warehouse.edit', $otherWarehouse->id))
             ->assertNotFound();
         $this->actingAs($user)->get(route('admin.warehouse.edit', $directWarehouse->id))

@@ -21,7 +21,7 @@ class BranchController extends Controller
     //List
     public function list()
     {
-        $branches = Branch::accessibleTo(auth()->user())->with('location.country',
+        $branches = Branch::accessibleTo(auth()->user())->with('warehouse', 'location.country',
         'location.state',
         'location.city',
         'location.upazila', 'location.areaRecord')->paginate(10);
@@ -32,7 +32,8 @@ class BranchController extends Controller
     public function create()
     {
         $countries = Country::all();
-        return view('admin.branch.create', compact('countries'));
+        $warehouses = Warehouse::accessibleTo(auth()->user())->get();
+        return view('admin.branch.create', compact('countries', 'warehouses'));
     }
 
     //Store
@@ -46,6 +47,7 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
             'upazila_id' => 'nullable|exists:upazilas,id',
             'area_id' => 'nullable|exists:areas,id',
             'area' => 'nullable|string|max:120',
@@ -75,6 +77,7 @@ class BranchController extends Controller
             'code' => $request->code,
             'slug' => $request->slug,
             'location_id' => $location->id,
+            'warehouse_id' => $request->warehouse_id,
             'capacity' => $request->capacity,
             'starting_date' => $request->starting_date,
             'status' => $request->status,
@@ -88,7 +91,8 @@ class BranchController extends Controller
     public function edit($id){
         $branch = Branch::accessibleTo(auth()->user())->findOrFail($id);
         $countries = Country::all();
-        return view('admin.branch.edit', compact('branch', 'countries'));
+        $warehouses = Warehouse::accessibleTo(auth()->user())->get();
+        return view('admin.branch.edit', compact('branch', 'countries', 'warehouses'));
     }
 
     //update
@@ -101,6 +105,7 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
             'upazila_id' => 'nullable|exists:upazilas,id',
             'area_id' => 'nullable|exists:areas,id',
             'area' => 'nullable|string|max:120',
@@ -129,6 +134,7 @@ class BranchController extends Controller
             'code' => $request->code,
             'slug' => $request->slug,
             'location_id' => $location->id,
+            'warehouse_id' => $request->warehouse_id,
             'capacity' => $request->capacity,
             'starting_date' => $request->starting_date,
             'status' => $request->status,

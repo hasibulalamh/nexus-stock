@@ -10,7 +10,6 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\Warehouse;
 use App\Models\Concerns\RecordsActivity;
 
 
@@ -91,8 +90,8 @@ class User extends Authenticatable
      * - A superadmin, or any user with access_all = true, sees everything
      *   (these helpers then return null = unrestricted).
      * - Otherwise the assigned ids are returned (an empty array = no access).
-     * - A user with access to a branch also gets the warehouses whose branch_id
-     *   is that branch, in addition to directly assigned warehouses (union, unique).
+     * - Branch and warehouse assignments are independent. Warehouse assignments
+     *   also grant read access to stock data for supplied branches.
      * - access_all users and superadmin keep seeing everything.
      *
      * @return array<int>|null null means "all access", empty array means "no access"
@@ -123,20 +122,18 @@ class User extends Authenticatable
             return null;
         }
 
-        // Directly assigned warehouses
-        $directIds = $this->warehouses()->pluck('warehouses.id')->all();
+        return $this->warehouses()->pluck('warehouses.id')->all();
+    }
 
-        // Warehouses assigned via the user's branches (via branch_id on warehouses)
-        $branchWarehouseIds = [];
-        foreach ($this->branches as $branch) {
-            $branchWare = Warehouse::where('branch_id', $branch->id)->pluck('id')->all();
-            $branchWarehouseIds = array_merge($branchWarehouseIds, $branchWare);
+    /** @return array<int>|null null means "all access" */
+    public function readableSuppliedBranchIds(): ?array
+    {
+        if ($this->hasAccessAll()) {
+            return null;
         }
 
-        // Union of direct and branch-assigned warehouses, unique
-        $allIds = array_unique(array_merge($directIds, $branchWarehouseIds));
-
-        return $allIds;  // Return empty array if no ids (means no access)
+        return Branch::whereIn('warehouse_id', $this->accessibleWarehouseIds() ?: [])
+            ->pluck('id')->all();
     }
 
     public function role(){

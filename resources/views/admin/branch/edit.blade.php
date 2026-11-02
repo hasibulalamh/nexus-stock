@@ -113,6 +113,18 @@
           </div>
 
           <div class="col-12 col-md-4">
+            <label class="form-label" for="warehouse_id">Supplying warehouse</label>
+            <select id="warehouse_id" name="warehouse_id" class="form-select @error('warehouse_id') is-invalid @enderror">
+              <option value="">-- Select warehouse --</option>
+              @foreach($warehouses as $warehouse)
+                <option value="{{ $warehouse->id }}" @selected(old('warehouse_id', $branch->warehouse_id) == $warehouse->id)>{{ $warehouse->name }}</option>
+              @endforeach
+            </select>
+            <small class="text-muted">Optional, but recommended for stock replenishment.</small>
+            @error('warehouse_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="col-12 col-md-4">
             <label class="form-label" for="area_id">Area (from list)</label>
             <select id="area_id" name="area_id" class="form-select @error('area_id') is-invalid @enderror"><option value="">-- Area not in list --</option>@if($branch->location->areaRecord)<option value="{{ $branch->location->area_id }}" selected>{{ $branch->location->areaRecord->display_name }}</option>@endif</select>
           </div>

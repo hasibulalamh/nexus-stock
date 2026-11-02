@@ -9,7 +9,6 @@ use App\Models\State;
 use App\Models\City;
 use App\Models\Location;
 use App\Models\Upazila;
-use App\Models\Branch;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Area;
@@ -20,7 +19,7 @@ class WarehouseController extends Controller
     //list
     public function list()
     {
-        $warehouses = Warehouse::accessibleTo(auth()->user())->with('location.country',
+        $warehouses = Warehouse::accessibleTo(auth()->user())->withCount('branches')->with('location.country',
             'location.state',
             'location.city',
             'location.upazila', 'location.areaRecord')->paginate(10);
@@ -31,8 +30,7 @@ class WarehouseController extends Controller
     public function create()
     {
         $countries = Country::all();
-        $branches = Branch::all();
-        return view('warehouse.create', compact('countries', 'branches'));
+        return view('warehouse.create', compact('countries'));
     }
 
     //store
@@ -51,7 +49,6 @@ class WarehouseController extends Controller
             'capacity' => 'required',
             'starting_date' => 'required',
             'status' => 'required|in:active,inactive',
-            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         if ($validation->fails()) {
@@ -75,7 +72,6 @@ class WarehouseController extends Controller
             'code' => $request->code,
             'slug' => $request->slug,
             'location_id' => $location->id,
-            'branch_id' => $request->branch_id,
             'capacity' => $request->capacity,
             'starting_date' => $request->starting_date,
             'status' => $request->status,
@@ -87,8 +83,7 @@ class WarehouseController extends Controller
     public function edit($id){
         $warehouse = Warehouse::accessibleTo(auth()->user())->findOrFail($id);
         $countries = Country::all();
-        $branches = Branch::all();
-        return view('warehouse.edit', compact('warehouse', 'countries', 'branches'));
+        return view('warehouse.edit', compact('warehouse', 'countries'));
     }
 
     //update
@@ -107,7 +102,6 @@ class WarehouseController extends Controller
             'capacity' => 'required',
             'starting_date' => 'required',
             'status' => 'required|in:active,inactive',
-            'branch_id' => 'nullable|exists:branches,id',
         ]);
 
         if ($validation->fails()) {
@@ -132,7 +126,6 @@ class WarehouseController extends Controller
             'code' => $request->code,
             'slug' => $request->slug,
             'location_id' => $location->id,
-            'branch_id' => $request->branch_id,
             'capacity' => $request->capacity,
             'starting_date' => $request->starting_date,
             'status' => $request->status,

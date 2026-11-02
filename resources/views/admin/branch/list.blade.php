@@ -23,6 +23,7 @@
             <th scope="col" class="d-none d-md-table-cell">ID</th>
             <th scope="col">Branch</th>
             <th scope="col">Code</th>
+            <th scope="col" class="d-none d-lg-table-cell">Supplying warehouse</th>
             <th scope="col" class="d-none d-lg-table-cell">Location</th>
             <th scope="col" class="d-none d-md-table-cell">Capacity</th>
             <th scope="col">Status</th>
@@ -42,6 +43,8 @@
               </td>
 
               <td><span class="nx-code">{{ $branch->code }}</span></td>
+
+              <td class="d-none d-lg-table-cell">{{ $branch->warehouse?->name ?? 'Not assigned' }}</td>
 
               <td class="d-none d-lg-table-cell">
                 <span class="nx-user-sub text-truncate d-inline-block w-100" title="{{ $branch->location?->full_address ?: 'No location set' }}">
@@ -85,7 +88,7 @@
             </tr>
           @empty
             <tr>
-              <td colspan="7" class="nx-empty">
+              <td colspan="8" class="nx-empty">
                 <i class="fas fa-store"></i>
                 <div class="nx-empty-title">No branches found</div>
                 <div class="nx-empty-sub">Add your first branch to get started.</div>
