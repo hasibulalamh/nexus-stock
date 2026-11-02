@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\StockMovementType;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
 
@@ -13,11 +14,21 @@ class StockMovement extends Model
         'location_id',
         'movement_type',
         'quantity_delta',
+        'balance_after',
+        'reference_type',
+        'reference_id',
+        'batch_uuid',
+        'occurred_at',
         'notes',
         'performed_by',
     ];
 
-    protected $casts = ['quantity_delta' => 'decimal:3'];
+    protected $casts = [
+        'movement_type' => StockMovementType::class,
+        'quantity_delta' => 'decimal:3',
+        'balance_after' => 'decimal:3',
+        'occurred_at' => 'datetime',
+    ];
 
     public function product()
     {

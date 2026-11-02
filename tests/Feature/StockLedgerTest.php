@@ -11,6 +11,8 @@ use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\Branch;
+use App\Enums\StockMovementType;
+use App\Exceptions\InsufficientStockException;
 use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -145,7 +147,7 @@ class StockLedgerTest extends TestCase
         $warehouse = $this->warehouse();
         $service = app(StockService::class);
         $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'opening', 10);
-        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'issue', -2.25);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::SALE, -2.25);
 
         $this->assertSame('7.750', StockLevel::firstOrFail()->quantity);
         $this->expectException(\InvalidArgumentException::class);
@@ -192,7 +194,7 @@ class StockLedgerTest extends TestCase
         $warehouse = $this->warehouse();
         $service = app(StockService::class);
         $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'opening', 8);
-        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'issue', -3);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::SALE, -3);
         StockLevel::query()->update(['quantity' => 999]);
 
         $this->assertSame(1, $service->rebuild());
@@ -207,5 +209,172 @@ class StockLedgerTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         app(StockService::class)->recordMovement($this->superadmin, $product, 'warehouse', $this->warehouse()->id, 'opening', 1);
+    }
+
+    public function test_integer_thousandths_math_balance_chain_and_precision_validation(): void
+    {
+        $product = $this->product();
+        $warehouse = $this->warehouse();
+        $service = app(StockService::class);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'opening', '0.1');
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'purchase', '0.2');
+
+        $this->assertSame('0.300', StockLevel::firstOrFail()->quantity);
+        $this->assertSame(['0.100', '0.300'], StockMovement::orderBy('id')->pluck('balance_after')->all());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'purchase', '0.0001');
+    }
+
+    public function test_negative_stock_is_blocked_and_config_can_allow_it(): void
+    {
+        $product = $this->product();
+        $warehouse = $this->warehouse();
+        $service = app(StockService::class);
+
+        try {
+            $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::SALE, '-0.001');
+            $this->fail('Expected insufficient stock exception.');
+        } catch (InsufficientStockException $exception) {
+            $this->assertSame(0, $exception->available);
+            $this->assertSame(1, $exception->requested);
+        }
+
+        config(['stock.allow_negative' => true]);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::SALE, '-0.001');
+        $this->assertSame('-0.001', StockLevel::firstOrFail()->quantity);
+    }
+
+    public function test_movement_types_signs_and_locations_are_validated(): void
+    {
+        $product = $this->product();
+        $warehouse = $this->warehouse();
+        $service = app(StockService::class);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'unknown', 1);
+    }
+
+    public function test_movement_type_sign_rules_are_enforced(): void
+    {
+        $product = $this->product();
+        $warehouse = $this->warehouse();
+        $service = app(StockService::class);
+
+        try {
+            $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::PURCHASE, -1);
+            $this->fail('Expected positive sign validation.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContainsString('wrong sign', $exception->getMessage());
+        }
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::SALE, 1);
+    }
+
+    public function test_superadmin_cannot_use_missing_location_or_deleted_product(): void
+    {
+        $product = $this->product();
+        $service = app(StockService::class);
+        try {
+            $service->recordMovement($this->superadmin, $product, 'warehouse', 999999, 'opening', 1);
+            $this->fail('Expected missing location exception.');
+        } catch (\InvalidArgumentException) {
+            $this->assertSame(0, StockMovement::count());
+        }
+
+        $product->delete();
+        $this->expectException(\InvalidArgumentException::class);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $this->warehouse()->id, 'opening', 1);
+    }
+
+    public function test_transfer_is_atomic_and_shares_batch(): void
+    {
+        $product = $this->product();
+        $from = $this->warehouse('Source');
+        $to = $this->warehouse('Destination');
+        $service = app(StockService::class);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $from->id, 'opening', 5);
+        [$out, $in] = $service->transfer($this->superadmin, $product, 'warehouse', $from->id, 'warehouse', $to->id, '1.250');
+
+        $this->assertSame($out->batch_uuid, $in->batch_uuid);
+        $this->assertSame('3.750', StockLevel::where('location_id', $from->id)->firstOrFail()->quantity);
+        $this->assertSame('1.250', StockLevel::where('location_id', $to->id)->firstOrFail()->quantity);
+    }
+
+    public function test_transfer_rolls_back_on_insufficient_stock_and_rejects_same_location(): void
+    {
+        $product = $this->product();
+        $from = $this->warehouse('Source');
+        $to = $this->warehouse('Destination');
+        $service = app(StockService::class);
+
+        try {
+            $service->transfer($this->superadmin, $product, 'warehouse', $from->id, 'warehouse', $to->id, 1);
+            $this->fail('Expected insufficient stock exception.');
+        } catch (InsufficientStockException) {
+            $this->assertSame(0, StockMovement::count());
+        }
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->transfer($this->superadmin, $product, 'warehouse', $from->id, 'warehouse', $from->id, 1);
+    }
+
+    public function test_create_if_missing_path_is_idempotent_when_level_already_exists(): void
+    {
+        $product = $this->product();
+        $warehouse = $this->warehouse();
+        StockLevel::create(['product_id' => $product->id, 'location_type' => 'warehouse', 'location_id' => $warehouse->id, 'quantity' => '0.000']);
+
+        app(StockService::class)->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'opening', '1.000');
+        $this->assertSame(1, StockLevel::where('product_id', $product->id)->count());
+    }
+
+    public function test_rebuild_dry_run_detects_tampering_and_normal_rebuild_fixes_levels_and_chain(): void
+    {
+        $product = $this->product();
+        $warehouse = $this->warehouse();
+        $service = app(StockService::class);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'opening', 2);
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::SALE, -1);
+        StockLevel::query()->update(['quantity' => '99.000']);
+        StockMovement::query()->where('id', 2)->update(['balance_after' => '99.000']);
+
+        $this->assertSame(1, Artisan::call('stock:rebuild', ['--dry-run' => true]));
+        $this->assertSame(0, Artisan::call('stock:rebuild'));
+        $this->assertSame('1.000', StockLevel::firstOrFail()->quantity);
+        $this->assertSame('1.000', StockMovement::find(2)->balance_after);
+    }
+
+    public function test_seeded_randomized_operations_keep_every_level_equal_to_ledger_sum(): void
+    {
+        mt_srand(20261103);
+        $product = $this->product();
+        $warehouse = $this->warehouse();
+        $service = app(StockService::class);
+        $expected = 0;
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'opening', 100);
+        $expected = 100000;
+
+        for ($i = 0; $i < 40; $i++) {
+            $amount = mt_rand(1, 125) * 1000;
+            if ($amount > $expected || mt_rand(0, 1) === 0) {
+                $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, 'purchase', $this->formatTestQuantity($amount));
+                $expected += $amount;
+            } else {
+                $service->recordMovement($this->superadmin, $product, 'warehouse', $warehouse->id, StockMovementType::SALE, $this->formatTestQuantity(-$amount));
+                $expected -= $amount;
+            }
+        }
+
+        $level = StockLevel::firstOrFail();
+        $sum = StockMovement::sum('quantity_delta');
+        $this->assertSame($this->formatTestQuantity($expected), $level->quantity);
+        $this->assertSame($this->formatTestQuantity($expected), number_format((float) $sum, 3, '.', ''));
+    }
+
+    private function formatTestQuantity(int $thousandths): string
+    {
+        return sprintf('%d.%03d', intdiv($thousandths, 1000), $thousandths % 1000);
     }
 }
