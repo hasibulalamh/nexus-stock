@@ -114,11 +114,11 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="area_id">Area (from list)</label>
-            <select id="area_id" name="area_id" class="form-select @error('area_id') is-invalid @enderror"><option value="">-- Area not in list --</option>@if($branch->location->area)<option value="{{ $branch->location->area_id }}" selected>{{ $branch->location->area->display_name }}</option>@endif</select>
+            <select id="area_id" name="area_id" class="form-select @error('area_id') is-invalid @enderror"><option value="">-- Area not in list --</option>@if($branch->location->areaRecord)<option value="{{ $branch->location->area_id }}" selected>{{ $branch->location->areaRecord->display_name }}</option>@endif</select>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label" for="area">Area (optional, e.g. Mirpur-10)</label>
-            <input type="text" id="area" name="area" value="{{ old('area', $branch->location->area) }}"
+            <input type="text" id="area" name="area" value="{{ old('area', $branch->location->areaRecord?->display_name ?? $branch->location->area) }}"
                    class="form-control @error('area') is-invalid @enderror">
             @error('area')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>

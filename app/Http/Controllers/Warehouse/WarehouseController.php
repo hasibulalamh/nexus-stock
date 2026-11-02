@@ -23,7 +23,7 @@ class WarehouseController extends Controller
         $warehouses = Warehouse::accessibleTo(auth()->user())->with('location.country',
             'location.state',
             'location.city',
-            'location.upazila', 'location.area')->paginate(10);
+            'location.upazila', 'location.areaRecord')->paginate(10);
         return view('warehouse.list', compact('warehouses'));
     }
 

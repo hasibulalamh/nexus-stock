@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Area;
+use App\Models\Branch;
 use App\Models\City;
 use App\Models\Country;
+use App\Models\Location;
 use App\Models\Permission;
 use App\Models\State;
 use App\Models\Upazila;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\AreaImportService;
 use Database\Seeders\AreaSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -232,6 +235,96 @@ class AreasFeatureTest extends TestCase
 
         $preview = app(AreaImportService::class)->analyse($path);
         $this->assertSame([], $preview['errors']);
+    }
+
+    public function test_branch_and_warehouse_edit_and_list_pages_render_all_area_variants(): void
+    {
+        $area = Area::create([
+            'city_id' => $this->city->id,
+            'name' => 'Listed Area',
+            'name_bn' => 'তালিকাভুক্ত এলাকা',
+            'status' => 'active',
+        ]);
+        $variants = [
+            'record' => ['area_id' => $area->id, 'area' => $area->display_name],
+            'text' => ['area_id' => null, 'area' => 'Free Text Area'],
+            'empty' => ['area_id' => null, 'area' => null],
+        ];
+
+        foreach ($variants as $variant => $values) {
+            $location = Location::create([
+                'country_id' => $this->state->country_id,
+                'state_id' => $this->state->id,
+                'city_id' => $this->city->id,
+                'upazila_id' => $this->upazila->id,
+                ...$values,
+                'address_line' => null,
+            ]);
+            $branch = Branch::create([
+                'name' => "Area {$variant} branch",
+                'code' => "AREA-{$variant}-B",
+                'slug' => "area-{$variant}-branch",
+                'location_id' => $location->id,
+                'capacity' => 100,
+                'starting_date' => '2026-01-01',
+                'status' => 'active',
+            ]);
+            $warehouse = Warehouse::create([
+                'name' => "Area {$variant} warehouse",
+                'code' => "AREA-{$variant}-W",
+                'slug' => "area-{$variant}-warehouse",
+                'location_id' => $location->id,
+                'capacity' => 100,
+                'starting_date' => '2026-01-01',
+                'status' => 'active',
+            ]);
+
+            $branchEdit = $this->actingAs($this->superadmin)->get(route('admin.branch.edit', $branch->id));
+            $warehouseEdit = $this->actingAs($this->superadmin)->get(route('admin.warehouse.edit', $warehouse->id));
+            $branchEdit->assertOk();
+            $warehouseEdit->assertOk();
+            if ($variant === 'record') {
+                $branchEdit->assertSee('Listed Area (তালিকাভুক্ত এলাকা)');
+                $warehouseEdit->assertSee('Listed Area (তালিকাভুক্ত এলাকা)');
+            } elseif ($variant === 'text') {
+                $branchEdit->assertSee('value="Free Text Area"', false);
+                $warehouseEdit->assertSee('value="Free Text Area"', false);
+            }
+        }
+
+        $this->actingAs($this->superadmin)->get(route('admin.branch.list'))
+            ->assertOk()
+            ->assertSee('Listed Area (তালিকাভুক্ত এলাকা)');
+        $this->actingAs($this->superadmin)->get(route('admin.warehouse.list'))
+            ->assertOk()
+            ->assertSee('Listed Area (তালিকাভুক্ত এলাকা)');
+    }
+
+    public function test_user_create_allocation_labels_render_area_safe_locations(): void
+    {
+        $area = Area::create(['city_id' => $this->city->id, 'name' => 'Allocation Area', 'status' => 'active']);
+        $listedLocation = Location::create([
+            'country_id' => $this->state->country_id,
+            'state_id' => $this->state->id,
+            'city_id' => $this->city->id,
+            'upazila_id' => $this->upazila->id,
+            'area_id' => $area->id,
+            'area' => $area->display_name,
+        ]);
+        $textLocation = Location::create([
+            'country_id' => $this->state->country_id,
+            'state_id' => $this->state->id,
+            'city_id' => $this->city->id,
+            'upazila_id' => $this->upazila->id,
+            'area' => 'Allocation Free Text',
+        ]);
+        Branch::create(['name' => 'Allocation Branch', 'code' => 'ALLOC-B', 'slug' => 'allocation-branch', 'location_id' => $listedLocation->id, 'capacity' => 100, 'starting_date' => '2026-01-01', 'status' => 'active']);
+        Warehouse::create(['name' => 'Allocation Warehouse', 'code' => 'ALLOC-W', 'slug' => 'allocation-warehouse', 'location_id' => $textLocation->id, 'capacity' => 100, 'starting_date' => '2026-01-01', 'status' => 'active']);
+
+        $this->actingAs($this->superadmin)->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('Allocation Branch - Allocation Area')
+            ->assertSee('Allocation Warehouse - Allocation Free Text');
     }
 
     private function makeUser(string $name, array $permissions): User

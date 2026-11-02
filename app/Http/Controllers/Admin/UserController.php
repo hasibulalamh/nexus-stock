@@ -28,10 +28,12 @@ class UserController extends Controller
             'designation',
             'roles',
             'branches.location.upazila',
+            'branches.location.areaRecord',
             'branches.location.city',
             'branches.location.state',
             'branches.location.country',
             'warehouses.location.upazila',
+            'warehouses.location.areaRecord',
             'warehouses.location.city',
             'warehouses.location.state',
             'warehouses.location.country',
@@ -65,10 +67,10 @@ class UserController extends Controller
         $designations = Designation::all();
         // The picker only offers what the editing user may access themselves.
         $branches = Branch::accessibleTo(auth()->user())
-            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->with('location.upazila', 'location.areaRecord', 'location.city', 'location.state', 'location.country')
             ->orderBy('name')->get(['id', 'name', 'location_id']);
         $warehouses = Warehouse::accessibleTo(auth()->user())
-            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->with('location.upazila', 'location.areaRecord', 'location.city', 'location.state', 'location.country')
             ->orderBy('name')->get(['id', 'name', 'location_id']);
 
         return view('admin.user.create', compact('roles', 'departments', 'designations', 'branches', 'warehouses'));
@@ -172,10 +174,10 @@ class UserController extends Controller
         $designations = Designation::all();
         // The picker only offers what the editing user may access themselves.
         $branches = Branch::accessibleTo(auth()->user())
-            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->with('location.upazila', 'location.areaRecord', 'location.city', 'location.state', 'location.country')
             ->orderBy('name')->get(['id', 'name', 'location_id']);
         $warehouses = Warehouse::accessibleTo(auth()->user())
-            ->with('location.upazila', 'location.city', 'location.state', 'location.country')
+            ->with('location.upazila', 'location.areaRecord', 'location.city', 'location.state', 'location.country')
             ->orderBy('name')->get(['id', 'name', 'location_id']);
 
         return view('admin.user.edit', compact('user', 'roles', 'departments', 'designations', 'branches', 'warehouses'));

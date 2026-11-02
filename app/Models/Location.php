@@ -21,7 +21,7 @@ class Location extends Model
     {
         $parts = [
             $this->getAttribute('address_line'),
-            $this->getAttribute('area'),
+            $this->areaRecord?->display_name ?: $this->getAttribute('area'),
             $this->upazila?->name,
             $this->city?->name,
             $this->state?->name,
@@ -48,7 +48,7 @@ class Location extends Model
     {
         return $this->belongsTo(Upazila::class);
     }
-    public function area()
+    public function areaRecord()
     {
         return $this->belongsTo(Area::class);
     }

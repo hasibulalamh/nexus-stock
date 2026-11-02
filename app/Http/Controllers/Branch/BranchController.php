@@ -24,7 +24,7 @@ class BranchController extends Controller
         $branches = Branch::accessibleTo(auth()->user())->with('location.country',
         'location.state',
         'location.city',
-        'location.upazila', 'location.area')->paginate(10);
+        'location.upazila', 'location.areaRecord')->paginate(10);
         return view('admin.branch.list', compact('branches'));
     }
 
