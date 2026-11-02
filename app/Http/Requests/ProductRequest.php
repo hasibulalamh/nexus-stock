@@ -24,21 +24,20 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         $product = $this->route('product') ?? $this->route('id');
+        $productId = is_object($product) ? $product->getKey() : $product;
 
         return [
             'sku' => [
                 'required',
                 'string',
                 'max:255',
-                'unique:products,sku',
-                Rule::when($product, ['ignore' => $product]),
+                Rule::unique('products', 'sku')->ignore($productId),
             ],
             'barcode' => [
                 'nullable',
                 'string',
                 'max:255',
-                'unique:products,barcode',
-                Rule::when($product && $this->filled('barcode'), ['ignore' => $product]),
+                Rule::unique('products', 'barcode')->ignore($productId),
             ],
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:255'],
@@ -60,7 +59,7 @@ class ProductRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
-        $validator->after(function ($validator) use ($product) {
+        $validator->after(function ($validator) {
             // SKU must be uppercase and trimmed
             $sku = strtoupper(trim($this->input('sku', '')));
             if ($sku !== $this->input('sku')) {

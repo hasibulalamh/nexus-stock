@@ -10,6 +10,8 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use App\Services\StockService;
+use App\Models\StockLevel;
 
 class ProductController extends Controller
 {
@@ -150,8 +152,17 @@ class ProductController extends Controller
         }
 
         if ($product) {
+            $reorderLevelChanged = (string) $product->reorder_level !== (string) $request->reorder_level;
             $product->update($attributes);
             $result = $product;
+            if ($reorderLevelChanged) {
+                StockLevel::query()
+                    ->where('product_id', $result->id)
+                    ->where('location_type', 'branch')
+                    ->whereNull('min_quantity')
+                    ->get()
+                    ->each(fn (StockLevel $level) => app(StockService::class)->syncAlertForLevel($level));
+            }
         } else {
             $result = Product::create($attributes);
         }

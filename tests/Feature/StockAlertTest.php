@@ -142,4 +142,112 @@ class StockAlertTest extends TestCase
         $service->recordMovement($this->superadmin, $product, 'branch', $other->id, 'opening', 0.001);
         $this->assertSame(1, StockAlert::count());
     }
+
+    public function test_alert_opened_inside_rolled_back_outer_transaction_is_not_dispatched(): void
+    {
+        Event::fake([LowStockAlertOpened::class]);
+        $product = $this->product();
+        $branch = $this->branch('Rollback Branch');
+        $service = app(StockService::class);
+
+        try {
+            DB::transaction(function () use ($service, $product, $branch): void {
+                $service->recordMovement($this->superadmin, $product, 'branch', $branch->id, 'opening', 1);
+                throw new \RuntimeException('outer rollback');
+            });
+        } catch (\RuntimeException) {
+        }
+
+        $this->assertSame(0, StockAlert::count());
+        Event::assertNotDispatched(LowStockAlertOpened::class);
+    }
+
+    public function test_committed_alert_dispatches_exactly_once_and_transfer_destination_does_too(): void
+    {
+        Event::fake([LowStockAlertOpened::class]);
+        $product = $this->product();
+        $branch = $this->branch('Committed Branch');
+        $service = app(StockService::class);
+
+        $service->recordMovement($this->superadmin, $product, 'branch', $branch->id, 'opening', 1);
+        Event::assertDispatchedTimes(LowStockAlertOpened::class, 1);
+
+        Event::fake([LowStockAlertOpened::class]);
+        $source = $this->warehouse('Transfer Source');
+        $destination = $this->branch('Transfer Destination');
+        $service->recordMovement($this->superadmin, $product, 'warehouse', $source->id, 'opening', 3);
+        $service->transfer($this->superadmin, $product, 'warehouse', $source->id, 'branch', $destination->id, 3);
+
+        Event::assertDispatchedTimes(LowStockAlertOpened::class, 1);
+    }
+
+    public function test_setting_minimum_re_evaluates_current_branch_quantity_without_movement(): void
+    {
+        Event::fake([LowStockAlertOpened::class]);
+        $product = $this->product();
+        $branch = $this->branch('Threshold Re-evaluation Branch');
+        $service = app(StockService::class);
+        $service->recordMovement($this->superadmin, $product, 'branch', $branch->id, 'opening', 4);
+        $level = \App\Models\StockLevel::where('location_id', $branch->id)->firstOrFail();
+
+        $this->actingAs($this->superadmin)
+            ->post(route('admin.stock.levels.minimum', $level), ['min_quantity' => '5'])
+            ->assertRedirect();
+        $this->assertSame(1, StockAlert::where('status', 'open')->count());
+        Event::assertDispatchedTimes(LowStockAlertOpened::class, 1);
+
+        $this->actingAs($this->superadmin)
+            ->post(route('admin.stock.levels.minimum', $level), ['min_quantity' => '3'])
+            ->assertRedirect();
+        $this->assertSame(1, StockAlert::where('status', 'resolved')->count());
+
+        $this->actingAs($this->superadmin)
+            ->post(route('admin.stock.levels.minimum', $level), ['min_quantity' => null])
+            ->assertRedirect();
+        $this->assertSame(1, StockAlert::where('status', 'resolved')->count());
+    }
+
+    public function test_product_reorder_change_re_evaluates_only_levels_without_overrides(): void
+    {
+        Event::fake([LowStockAlertOpened::class]);
+        $product = $this->product();
+        $product->update(['reorder_level' => null]);
+        $branch = $this->branch('Default Threshold Branch');
+        $overridden = $this->branch('Override Threshold Branch');
+        $defaultLevel = \App\Models\StockLevel::create([
+            'product_id' => $product->id, 'location_type' => 'branch',
+            'location_id' => $branch->id, 'quantity' => '4.000',
+        ]);
+        \App\Models\StockLevel::create([
+            'product_id' => $product->id, 'location_type' => 'branch',
+            'location_id' => $overridden->id, 'quantity' => '4.000', 'min_quantity' => '2.000',
+        ]);
+
+        $response = $this->actingAs($this->superadmin)->put(route('admin.products.update', $product), [
+            'sku' => $product->sku,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'category_id' => $product->category_id,
+            'unit' => 'pcs',
+            'cost_price' => $product->cost_price,
+            'selling_price' => $product->selling_price,
+            'reorder_level' => '5.000',
+            'track_stock' => 1,
+            'status' => 'active',
+        ])->assertRedirect();
+        $response->assertSessionDoesntHaveErrors();
+        $this->assertSame('5.000', $product->fresh()->reorder_level);
+
+        $this->assertSame(1, StockAlert::where('branch_id', $branch->id)->count());
+        $this->assertSame(0, StockAlert::where('branch_id', $overridden->id)->count());
+        Event::assertDispatchedTimes(LowStockAlertOpened::class, 1);
+
+        $this->actingAs($this->superadmin)->put(route('admin.products.update', $product), [
+            'sku' => $product->sku, 'name' => $product->name, 'slug' => $product->slug,
+            'category_id' => $product->category_id, 'unit' => 'pcs',
+            'cost_price' => $product->cost_price, 'selling_price' => $product->selling_price,
+            'reorder_level' => '5.000', 'track_stock' => 1, 'status' => 'active',
+        ])->assertRedirect();
+        Event::assertDispatchedTimes(LowStockAlertOpened::class, 1);
+    }
 }

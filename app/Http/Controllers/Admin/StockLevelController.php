@@ -6,6 +6,8 @@ use App\Models\StockLevel;
 use App\Support\StockAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use App\Services\StockService;
 
 class StockLevelController
 {
@@ -35,7 +37,10 @@ class StockLevelController
             'min_quantity' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
         ])->validate();
 
-        $stockLevel->update(['min_quantity' => $validated['min_quantity'] ?? null]);
+        DB::transaction(function () use ($stockLevel, $validated): void {
+            $stockLevel->update(['min_quantity' => $validated['min_quantity'] ?? null]);
+            app(StockService::class)->syncAlertForLevel($stockLevel);
+        });
 
         return back()->with('success', 'Branch stock minimum updated.');
     }

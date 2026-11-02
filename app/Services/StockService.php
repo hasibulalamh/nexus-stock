@@ -51,7 +51,7 @@ class StockService
 
             $level->quantity = $this->formatQuantity($after);
             $level->save();
-            $this->syncBranchAlert($product, $locationType, $locationId, $level, $after);
+            $this->syncAlertForLevel($level);
 
             return StockMovement::create([
                 'product_id' => $product->id,
@@ -190,56 +190,66 @@ class StockService
             ->lockForUpdate()->firstOrFail();
     }
 
-    private function syncBranchAlert(Product $product, string $locationType, int $locationId, StockLevel $level, int $quantity): void
+    public function syncAlertForLevel(StockLevel $stockLevel): void
     {
-        if ($locationType !== 'branch') {
-            return;
-        }
+        DB::transaction(function () use ($stockLevel): void {
+            $level = StockLevel::query()
+                ->whereKey($stockLevel->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $minimum = $level->min_quantity ?? $product->reorder_level;
-        $open = StockAlert::query()
-            ->where('product_id', $product->id)
-            ->where('branch_id', $locationId)
-            ->where('status', 'open')
-            ->lockForUpdate()
-            ->first();
-
-        if ($minimum === null) {
-            if ($open) {
-                $open->update(['status' => 'resolved', 'open_marker' => null, 'resolved_at' => now()]);
+            if ($level->location_type !== 'branch') {
+                return;
             }
-            return;
-        }
 
-        $minimumThousandths = $this->toThousandths($minimum);
-        if ($quantity > $minimumThousandths) {
-            if ($open) {
-                $open->update(['status' => 'resolved', 'open_marker' => null, 'resolved_at' => now()]);
+            $product = $level->product()->firstOrFail();
+            $quantity = $this->toThousandths($level->quantity);
+            $minimum = $level->min_quantity ?? $product->reorder_level;
+            $open = StockAlert::query()
+                ->where('product_id', $product->id)
+                ->where('branch_id', $level->location_id)
+                ->where('status', 'open')
+                ->lockForUpdate()
+                ->first();
+
+            if ($minimum === null) {
+                if ($open) {
+                    $open->update(['status' => 'resolved', 'open_marker' => null, 'resolved_at' => now()]);
+                }
+                return;
             }
-            return;
-        }
 
-        if ($open) {
-            $open->update([
+            $minimumThousandths = $this->toThousandths($minimum);
+            if ($quantity > $minimumThousandths) {
+                if ($open) {
+                    $open->update(['status' => 'resolved', 'open_marker' => null, 'resolved_at' => now()]);
+                }
+                return;
+            }
+
+            if ($open) {
+                $open->update([
+                    'quantity_at_alert' => $this->formatQuantity($quantity),
+                    'minimum_at_alert' => $this->formatQuantity($minimumThousandths),
+                ]);
+                return;
+            }
+
+            $branch = Branch::findOrFail($level->location_id);
+            $alert = StockAlert::create([
+                'product_id' => $product->id,
+                'branch_id' => $branch->id,
+                'warehouse_id' => $branch->warehouse_id,
                 'quantity_at_alert' => $this->formatQuantity($quantity),
                 'minimum_at_alert' => $this->formatQuantity($minimumThousandths),
+                'status' => 'open',
+                'open_marker' => 'open',
+                'opened_at' => now(),
+                'last_notified_at' => now(),
             ]);
-            return;
-        }
-
-        $branch = Branch::findOrFail($locationId);
-        $alert = StockAlert::create([
-            'product_id' => $product->id,
-            'branch_id' => $branch->id,
-            'warehouse_id' => $branch->warehouse_id,
-            'quantity_at_alert' => $this->formatQuantity($quantity),
-            'minimum_at_alert' => $this->formatQuantity($minimumThousandths),
-            'status' => 'open',
-            'open_marker' => 'open',
-            'opened_at' => now(),
-            'last_notified_at' => now(),
-        ]);
-        event(new LowStockAlertOpened($alert));
+            // ShouldDispatchAfterCommit defers this until the outermost transaction commits.
+            event(new LowStockAlertOpened($alert));
+        });
     }
 
     private function validatedProduct(Product $product): Product
