@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Support\StockAccess;
 use Illuminate\Support\Facades\DB;
+use Carbon\CarbonInterface;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -29,6 +30,7 @@ class StockService
         ?array $reference = null,
         ?string $notes = null,
         ?string $batchUuid = null,
+        ?CarbonInterface $occurredAt = null,
     ): StockMovement {
         $type = $this->movementType($movementType);
         $delta = $this->parseQuantity($quantityDelta);
@@ -65,7 +67,28 @@ class StockService
                 'batch_uuid' => $batchUuid,
                 'notes' => $notes,
                 'performed_by' => $user->id,
+                'occurred_at' => $occurredAt ?? now(),
             ]);
+        });
+    }
+
+    public function recordOpening(
+        User $user,
+        Product $product,
+        string $locationType,
+        int $locationId,
+        string|int|float $quantity,
+        ?CarbonInterface $occurredAt = null,
+        ?string $notes = null,
+    ): StockMovement {
+        $this->validateLocation($locationType, $locationId);
+        $product = $this->validatedProduct($product);
+        return DB::transaction(function () use ($user, $product, $locationType, $locationId, $quantity, $occurredAt, $notes): StockMovement {
+            if (StockMovement::query()->where('product_id', $product->id)->where('location_type', $locationType)->where('location_id', $locationId)->exists()) {
+                throw new InvalidArgumentException('Opening stock already exists. Use an adjustment for corrections.');
+            }
+
+            return $this->recordMovement($user, $product, $locationType, $locationId, StockMovementType::OPENING, $quantity, null, $notes, null, $occurredAt);
         });
     }
 
