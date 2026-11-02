@@ -17,6 +17,7 @@ use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use LogicException;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
@@ -425,8 +426,17 @@ class StockLedgerTest extends TestCase
         $this->assertNull($level->fresh()->effectiveMinimum());
     }
 
+    public function test_reference_columns_use_the_composite_index(): void
+    {
+        $indexes = collect(Schema::getIndexes('stock_movements'));
+        $this->assertTrue($indexes->contains(fn ($index) => $index['name'] === 'stock_movements_reference_type_reference_id_index'));
+        $this->assertFalse($indexes->contains(fn ($index) => $index['name'] === 'stock_movements_reference_type_index'));
+        $this->assertFalse($indexes->contains(fn ($index) => $index['name'] === 'stock_movements_reference_id_index'));
+    }
+
     private function formatTestQuantity(int $thousandths): string
     {
         return sprintf('%d.%03d', intdiv($thousandths, 1000), $thousandths % 1000);
     }
+
 }
