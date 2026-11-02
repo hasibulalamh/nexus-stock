@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AreaController;
 use App\Http\Controllers\Admin\StockLevelController;
+use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Warehouse\WarehouseController;
 use Illuminate\Support\Facades\Auth;
@@ -115,6 +116,10 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
 
     Route::group(['prefix' => 'stock', 'as' => 'stock.'], function () {
         Route::get('levels', [StockLevelController::class, 'index'])->middleware('can:stock.view')->name('levels');
+        Route::get('movements', [StockLevelController::class, 'movements'])->middleware('can:stock.movements.view')->name('movements');
+        Route::get('opening', [StockLevelController::class, 'opening'])->middleware('can:stock.opening')->name('opening');
+        Route::post('opening', [StockLevelController::class, 'storeOpening'])->middleware('can:stock.opening')->name('opening.store');
+        Route::get('alerts', [StockAlertController::class, 'index'])->middleware('can:stock.alerts.view')->name('alerts');
         Route::post('levels/{stockLevel}/minimum', [StockLevelController::class, 'setMinimum'])->middleware('can:stock.thresholds')->name('levels.minimum');
     });
 
