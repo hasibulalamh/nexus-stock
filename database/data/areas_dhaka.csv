@@ -25,7 +25,7 @@ osm_id,area,area_bn,type,osm_place,lat,lng,city,thana_hint,source,verified,notes
 9306398087,Biharipara,বিহারিপাড়া,section,quarter,23.790544,90.356339,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 9036243801,Bishil,বিশিল,area,suburb,23.796274,90.349924,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 12091448015,Boro Bazar,বড় বাজার,section,quarter,23.787085,90.340276,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
-6538885127,Borobagh,বড়বাগ,area,suburb,23.802488,90.362058,Dhaka,,OpenStreetMap (ODbL),no,
+6538885127,Borobagh,বড়বাগ,area,suburb,23.802488,90.362058,Dhaka,,OpenStreetMap (ODbL),no,
 9333465940,Bottola,বটতলা,locality,neighbourhood,23.787613,90.363127,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 8948933299,Bow Bazar,বউ বাজার,locality,neighbourhood,23.789082,90.361984,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 9037174039,Chhoto Diabari,ছোট দিয়াবাড়ী,section,quarter,23.797200,90.341308,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
@@ -65,7 +65,7 @@ osm_id,area,area_bn,type,osm_place,lat,lng,city,thana_hint,source,verified,notes
 9119036266,Mastertek,মাস্টারটেক,section,quarter,23.827753,90.385891,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 5185291301,Matikata,মাটিকাটা,area,suburb,23.818378,90.395264,Dhaka,ক্যান্টনমেন্ট থানা,OpenStreetMap (ODbL),no,also in Dhaka list
 13987963701,Middle Monipur,মধ্য মনিপুর,section,quarter,23.799578,90.365972,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
-6548896383,Middle Paikpara,মধ্য পাইকপাড়া,section,quarter,23.790052,90.359831,Dhaka,,OpenStreetMap (ODbL),no,
+6548896383,Middle Paikpara,মধ্য পাইকপাড়া,section,quarter,23.790052,90.359831,Dhaka,,OpenStreetMap (ODbL),no,
 8889587807,Middle Pirerbag,মধ্য পীরেরবাগ,section,quarter,23.788888,90.366670,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 8953925035,Mirpur,মিরপুর,area,suburb,23.812363,90.364089,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 392523377,Mirpur 1,মিরপুর ১,section,quarter,23.801924,90.352346,Dhaka,মিরপুর মডেল থানা,OpenStreetMap (ODbL),no,also in Dhaka list
@@ -117,10 +117,10 @@ osm_id,area,area_bn,type,osm_place,lat,lng,city,thana_hint,source,verified,notes
 14029007949,South Ibrahimpur,দক্ষিণ ইব্রাহিমপুর,section,quarter,23.793621,90.385013,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 6752954208,South Kafrul,দক্ষিণ কাফরুল,section,quarter,23.786054,90.384596,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 6538907196,South Monipur,দক্ষিণ মনিপুর,section,quarter,23.795438,90.367391,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
-6538882717,South Paikpara,দক্ষিণ পাইকপাড়া,section,quarter,23.785792,90.362041,Dhaka,,OpenStreetMap (ODbL),no,
+6538882717,South Paikpara,দক্ষিণ পাইকপাড়া,section,quarter,23.785792,90.362041,Dhaka,,OpenStreetMap (ODbL),no,
 6538882718,South Pirerbag,দক্ষিণ পীরেরবাগ,section,quarter,23.785978,90.369222,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
 13987962201,Staff Quarter,স্টাফ কোয়ার্টার,locality,neighbourhood,23.790171,90.352985,Dhaka,,OpenStreetMap (ODbL),no,OSM typo fixed from 'Staff Quarrter'; also in Dhaka list
-9331599938,Tafalia,তাফালিয়া,section,quarter,23.851488,90.377558,Dhaka,,OpenStreetMap (ODbL),no,
+9331599938,Tafalia,তাফালিয়া,section,quarter,23.851488,90.377558,Dhaka,,OpenStreetMap (ODbL),no,
 4362144964,Taltola,তালতলা,locality,neighbourhood,23.833772,90.385178,Dhaka,,OpenStreetMap (ODbL),no,"same name as another place elsewhere, check which one; also in Dhaka list"
 5054370483,Taltola,তালতলা,locality,neighbourhood,23.783715,90.375094,Dhaka,,OpenStreetMap (ODbL),no,"same name as another place elsewhere, check which one; also in Dhaka list"
 9029141717,Tolarbag,টোলারবাগ,area,suburb,23.789099,90.352055,Dhaka,,OpenStreetMap (ODbL),no,also in Dhaka list
@@ -219,10 +219,7 @@ osm_id,area,area_bn,type,osm_place,lat,lng,city,thana_hint,source,verified,notes
 ,টিটিপাড়া,টিটিপাড়া,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,দক্ষিণ শাহজাহানপুর,দক্ষিণ শাহজাহানপুর,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,শাহজাহানপুর রেলওয়ে কলোনি,শাহজাহানপুর রেলওয়ে কলোনি,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
-,দক্ষিণ পাইকপাড়া,দক্ষিণ পাইকপাড়া,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,উত্তর শ্যামলী,উত্তর শ্যামলী,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
-,বড়বাগ,বড়বাগ,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
-,মধ্য পাইকপাড়া,মধ্য পাইকপাড়া,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,শের-এ-বাংলা নগর,শের-এ-বাংলা নগর,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,আব্দুল রফিক হাউজিং,আব্দুল রফিক হাউজিং,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,মফিজবাগ হাউজিং,মফিজবাগ হাউজিং,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
@@ -521,7 +518,6 @@ osm_id,area,area_bn,type,osm_place,lat,lng,city,thana_hint,source,verified,notes
 ,শংকর,শংকর,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,নবীনগর হাউজিং,নবীনগর হাউজিং,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,আহালিয়া,আহালিয়া,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
-,তাফালিয়া,তাফালিয়া,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,পূর্ব নুরের চালা,পূর্ব নুরের চালা,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,আনসারবাগ,আনসারবাগ,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
 ,বাগানবাড়ি,বাগানবাড়ি,area,,,,Dhaka,,"Dhaka area list (OSM-derived, unverified)",no,"no English name yet; no coordinates, thana hint unverified"
