@@ -37,17 +37,17 @@
                 </button>
             </li>
 
-            {{-- notifications (real data comes later) --}}
             <li class="nav-item dropdown">
-                <a class="app-icon-btn" href="#" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" aria-label="Notifications">
+                <a class="app-icon-btn position-relative" href="#" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" aria-label="Notifications">
                     <i class="fas fa-bell"></i>
+                    <span id="notificationBadge" class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle d-none"></span>
                 </a>
-                <div class="dropdown-menu dropdown-menu-end app-dropdown app-dropdown--wide p-0">
-                    <div class="app-dropdown-head">Notifications</div>
-                    <div class="text-center text-muted py-4 small">
-                        <i class="far fa-bell-slash d-block mb-2 fs-4"></i>
-                        No new notifications
+                <div id="notificationDropdown" class="dropdown-menu dropdown-menu-end app-dropdown app-dropdown--wide p-0">
+                    <div class="app-dropdown-head d-flex justify-content-between align-items-center">
+                        <span>Notifications</span>
+                        <button type="button" id="markAllNotificationsRead" class="btn btn-link btn-sm p-0">Mark all as read</button>
                     </div>
+                    <div id="notificationItems" class="notification-items"></div>
                 </div>
             </li>
 
@@ -116,5 +116,69 @@
             search.focus();
         }
     });
+
+    var notificationBadge = document.getElementById('notificationBadge');
+    var notificationItems = document.getElementById('notificationItems');
+    var previousUnread = null;
+    var csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    function renderNotifications(payload) {
+        notificationBadge.textContent = payload.unread_count > 99 ? '99+' : String(payload.unread_count);
+        notificationBadge.classList.toggle('d-none', payload.unread_count === 0);
+        notificationItems.replaceChildren();
+
+        if (!payload.latest.length) {
+            var empty = document.createElement('div');
+            empty.className = 'text-center text-muted py-4 small';
+            empty.textContent = 'No notifications';
+            notificationItems.appendChild(empty);
+            return;
+        }
+
+        payload.latest.forEach(function (item) {
+            var link = document.createElement('a');
+            link.href = item.data.url || '#';
+            link.className = 'dropdown-item notification-item' + (item.read_at ? '' : ' fw-semibold');
+            link.dataset.notificationId = item.id;
+            link.textContent = item.data.message || 'Notification';
+            link.addEventListener('click', function (event) {
+                if (!item.read_at) {
+                    event.preventDefault();
+                    fetch('{{ route('notifications.read', ['id' => '__id__']) }}'.replace('__id__', encodeURIComponent(item.id)), {
+                        method: 'POST',
+                        headers: {'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
+                        credentials: 'same-origin'
+                    }).then(function () {
+                        window.location.href = link.href;
+                    });
+                }
+            });
+            notificationItems.appendChild(link);
+        });
+    }
+
+    function pollNotifications() {
+        if (document.hidden) return;
+        fetch('{{ route('notifications.index') }}', {
+            headers: {'Accept': 'application/json'},
+            credentials: 'same-origin'
+        }).then(function (response) { return response.json(); }).then(function (payload) {
+            if (previousUnread !== null && payload.unread_count > previousUnread && window.Swal) {
+                Swal.fire({toast: true, position: 'top-end', timer: 3500, showConfirmButton: false, icon: 'info', text: 'You have a new stock notification.'});
+            }
+            previousUnread = payload.unread_count;
+            renderNotifications(payload);
+        }).catch(function () {});
+    }
+
+    document.getElementById('markAllNotificationsRead').addEventListener('click', function () {
+        fetch('{{ route('notifications.read-all') }}', {
+            method: 'POST',
+            headers: {'X-CSRF-TOKEN': csrf, 'Accept': 'application/json'},
+            credentials: 'same-origin'
+        }).then(pollNotifications);
+    });
+    pollNotifications();
+    setInterval(pollNotifications, 30000);
 })();
 </script>

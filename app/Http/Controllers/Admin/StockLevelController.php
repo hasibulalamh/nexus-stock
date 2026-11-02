@@ -23,7 +23,11 @@ class StockLevelController
                             ->when($ids !== null, fn ($q) => $q->whereIn('location_id', $ids));
                     });
                 }
-            })->paginate(25);
+            })
+            ->when(request('branch_id'), fn ($query, $branchId) => $query
+                ->where('location_type', 'branch')
+                ->where('location_id', $branchId))
+            ->paginate(25);
 
         return view('admin.stock.levels', compact('levels'));
     }

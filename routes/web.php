@@ -18,6 +18,7 @@ use App\Http\Controllers\Warehouse\WarehouseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Services\LandingService;
+use App\Http\Controllers\NotificationController;
 
 Route::get('/', function () {
     return Auth::check()
@@ -28,6 +29,11 @@ Route::get('/', function () {
 Route::get('login', [LoginController::class, 'view'])->name('login');
 Route::post('login', [LoginController::class, 'login'])->name('login.submit');
 Route::post('logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
+Route::middleware('auth')->group(function () {
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+});
 
 
 
