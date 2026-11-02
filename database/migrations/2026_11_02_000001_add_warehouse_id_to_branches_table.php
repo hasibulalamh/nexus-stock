@@ -14,6 +14,11 @@ return new class extends Migration
             $table->index('warehouse_id');
         });
 
+        $this->backfill();
+    }
+
+    public function backfill(): void
+    {
         DB::statement(
             'UPDATE branches SET warehouse_id = (
                 SELECT MIN(id) FROM warehouses

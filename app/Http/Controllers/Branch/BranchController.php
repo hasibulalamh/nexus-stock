@@ -13,11 +13,26 @@ use App\Models\Upazila;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use App\Models\Area;
 use App\Services\LocationIdentityService;
 
 class BranchController extends Controller
 {
+    private function warehouseRule(): array
+    {
+        return [
+            'nullable',
+            Rule::exists('warehouses', 'id')->where(function ($query) {
+                $user = auth()->user();
+
+                if ($user && ! $user->hasAccessAll()) {
+                    $query->whereIn('id', $user->accessibleWarehouseIds() ?: [-1]);
+                }
+            }),
+        ];
+    }
+
     //List
     public function list()
     {
@@ -47,7 +62,7 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
-            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'warehouse_id' => $this->warehouseRule(),
             'upazila_id' => 'nullable|exists:upazilas,id',
             'area_id' => 'nullable|exists:areas,id',
             'area' => 'nullable|string|max:120',
@@ -105,7 +120,7 @@ class BranchController extends Controller
             'country_id' => 'required',
             'state_id' => 'required',
             'city_id' => 'required',
-            'warehouse_id' => 'nullable|exists:warehouses,id',
+            'warehouse_id' => $this->warehouseRule(),
             'upazila_id' => 'nullable|exists:upazilas,id',
             'area_id' => 'nullable|exists:areas,id',
             'area' => 'nullable|string|max:120',
