@@ -39,7 +39,7 @@ class LowStockNotification extends Notification
                 $this->alert->quantity_at_alert,
                 $this->alert->minimum_at_alert,
             ),
-            'url' => route('admin.stock.levels', ['branch_id' => $this->alert->branch_id]),
+            'url' => route('admin.stock.alerts', ['alert_id' => $this->alert->id]),
         ];
     }
 }

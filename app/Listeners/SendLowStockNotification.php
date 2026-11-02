@@ -39,13 +39,14 @@ class SendLowStockNotification
                 try {
                     $alreadyNotified = $user->notifications()
                         ->where('type', LowStockNotification::class)
-                        ->get()
-                        ->contains(fn ($notification): bool => (int) ($notification->data['alert_id'] ?? 0) === (int) $alert->id);
+                        ->where('created_at', '>=', $alert->opened_at)
+                        ->whereJsonContains('data->alert_id', $alert->id)
+                        ->exists();
                     if ($alreadyNotified) {
                         continue;
                     }
 
-                    $user->notify(new LowStockNotification($alert));
+                    $this->notifyUser($user, new LowStockNotification($alert));
                 } catch (Throwable $exception) {
                     Log::error('Unable to send low-stock notification.', [
                         'alert_id' => $alert->id,
@@ -62,5 +63,10 @@ class SendLowStockNotification
                 'exception' => $exception,
             ]);
         }
+    }
+
+    protected function notifyUser(User $user, LowStockNotification $notification): void
+    {
+        $user->notify($notification);
     }
 }
