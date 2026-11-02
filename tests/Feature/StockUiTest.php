@@ -16,6 +16,7 @@ use App\Services\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Mockery;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class StockUiTest extends TestCase
@@ -95,7 +96,7 @@ class StockUiTest extends TestCase
         $warehouse = $this->warehouse();
         $product = $this->product();
         $user = $this->superadmin;
-        $this->actingAs($user)->post(route('admin.stock.opening.store'), [
+        $response = $this->actingAs($user)->post(route('admin.stock.opening.store'), [
             'location_type' => 'warehouse', 'location_id' => $warehouse->id, 'product_id' => $product->id,
             'quantity' => '1.000', 'occurred_at' => '2026-11-03', 'notes' => 'Initial',
         ])->assertRedirect(route('admin.stock.levels'));
@@ -121,12 +122,17 @@ class StockUiTest extends TestCase
         $user = $this->superadmin->replicate();
         $user->email = uniqid('limited-').'@example.com';
         $user->full_name = 'Limited stock user';
+        $user->role_id = Role::create(['name' => 'limited-ui', 'guard_name' => 'web'])->id;
+        $user->access_all = false;
+        $user->status = 'active';
         $user->save();
+        $user->syncRoles(['limited-ui']);
         $user->givePermissionTo('stock.opening');
-        $this->actingAs($user)->post(route('admin.stock.opening.store'), [
+        $response = $this->actingAs($user)->post(route('admin.stock.opening.store'), [
             'location_type' => 'warehouse', 'location_id' => $warehouse->id, 'product_id' => $product->id,
             'quantity' => '1.000', 'occurred_at' => '2026-11-03',
-        ])->assertForbidden();
+        ]);
+        $response->assertForbidden();
     }
 
     public function test_alert_url_is_filtered_to_the_alert(): void
