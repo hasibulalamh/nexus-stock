@@ -23,15 +23,15 @@ class BrandRequest extends FormRequest
     public function rules(): array
     {
         $brand = $this->route('brand') ?? $this->route('id');
+        $brandId = is_object($brand) ? $brand->getKey() : $brand;
 
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:brands,name'],
+            'name' => ['required', 'string', 'max:255', Rule::unique('brands', 'name')->ignore($brandId)],
             'slug' => [
                 'required',
                 'string',
                 'max:255',
-                'unique:brands,slug',
-                Rule::when($brand, ['ignore' => $brand]),
+                Rule::unique('brands', 'slug')->ignore($brandId),
             ],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
             'website' => ['nullable', 'url'],
@@ -45,6 +45,8 @@ class BrandRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
+        $brand = $this->route('brand') ?? $this->route('id');
+
         $validator->after(function ($validator) use ($brand) {
             // Ensure slug is lowercase and unique
             $slug = strtolower(trim($this->input('slug', '')));

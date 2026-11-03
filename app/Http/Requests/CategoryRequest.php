@@ -24,6 +24,7 @@ class CategoryRequest extends FormRequest
     public function rules(): array
     {
         $category = $this->route('category') ?? $this->route('id');
+        $categoryId = is_object($category) ? $category->getKey() : $category;
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -31,8 +32,7 @@ class CategoryRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                'unique:categories,slug',
-                Rule::when($category, ['ignore' => $category]),
+                Rule::unique('categories', 'slug')->ignore($categoryId),
             ],
             'parent_id' => [
                 'nullable',
@@ -49,6 +49,8 @@ class CategoryRequest extends FormRequest
      */
     public function withValidator($validator): void
     {
+        $category = $this->route('category') ?? $this->route('id');
+
         $validator->after(function ($validator) use ($category) {
             // Check max depth (2 levels: root -> child, no grandchildren)
             $parentId = $this->input('parent_id');
@@ -64,7 +66,7 @@ class CategoryRequest extends FormRequest
 
             // Prevent circular reference (set itself as parent)
             if ($category) {
-                $categoryId = $category instanceof Category ? $category->id : $category;
+                $categoryId = $category instanceof Category ? $category->getKey() : $category;
                 if ($this->input('parent_id') == $categoryId) {
                     $validator->errors()->add(
                         'parent_id',
