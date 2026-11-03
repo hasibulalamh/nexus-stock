@@ -194,6 +194,10 @@ class ProductController extends Controller
 
     public function barcode(Request $request, Product $product)
     {
+        if ($product->tracking_type === 'serial') {
+            return redirect()->route('admin.stock.units.labels', ['product_id' => $product->id])
+                ->with('info', 'This product uses serial tracking. Print unit labels instead.');
+        }
         $validated = $request->validate([
             'quantity' => ['nullable', 'integer', 'min:1', 'max:200'],
             'size' => ['nullable', 'in:50x30,40x25,a4'],

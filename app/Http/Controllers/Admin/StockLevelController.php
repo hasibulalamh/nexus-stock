@@ -12,6 +12,7 @@ use App\Models\Branch;
 use App\Models\Warehouse;
 use App\Models\Product;
 use App\Models\StockMovement;
+use App\Models\StockUnit;
 use Carbon\Carbon;
 
 class StockLevelController
@@ -82,13 +83,28 @@ class StockLevelController
             'location_type' => ['required', 'in:branch,warehouse'],
             'location_id' => ['required', 'integer'],
             'product_id' => ['required', 'exists:products,id'],
-            'quantity' => ['required', 'numeric', 'gt:0', 'decimal:0,3'],
+            'quantity' => ['nullable', 'numeric', 'gt:0', 'decimal:0,3'],
+            'serial_numbers' => ['nullable', 'string'],
+            'allow_system_codes' => ['nullable', 'boolean'],
             'occurred_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
         abort_unless(StockAccess::canWrite($request->user(), $validated['location_type'], (int) $validated['location_id']), 403);
         $product = Product::findOrFail($validated['product_id']);
+        if ($product->tracking_type === 'quantity' && ! $request->filled('quantity')) {
+            return back()->withErrors(['quantity' => 'Quantity is required for quantity-tracked products.'])->withInput();
+        }
         try {
+            if ($product->tracking_type === 'serial') {
+                $result = app(StockService::class)->recordSerialOpening(
+                    $request->user(), $product, $validated['location_type'], (int) $validated['location_id'],
+                    preg_split('/\R/', (string) ($validated['serial_numbers'] ?? ''), -1, PREG_SPLIT_NO_EMPTY),
+                    (int) ($validated['quantity'] ?? 0), (bool) ($validated['allow_system_codes'] ?? false),
+                    Carbon::parse($validated['occurred_at']), $validated['notes'] ?? null,
+                );
+                return redirect()->route('admin.stock.units.labels', ['unit_ids' => $result['units']->pluck('id')->all()])
+                    ->with('success', 'Serial opening stock recorded.');
+            }
             app(StockService::class)->recordOpening(
                 $request->user(), $product, $validated['location_type'], (int) $validated['location_id'],
                 $validated['quantity'], Carbon::parse($validated['occurred_at']), $validated['notes'] ?? null,

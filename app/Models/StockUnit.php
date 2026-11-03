@@ -34,4 +34,9 @@ class StockUnit extends Model
             ->where('location_type', $locationType)
             ->where('location_id', $locationId);
     }
+
+    public static function unitCodeForId(int $id): string
+    {
+        return 'U'.str_pad((string) $id, 11, '0', STR_PAD_LEFT);
+    }
 }

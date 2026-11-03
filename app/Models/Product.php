@@ -36,6 +36,13 @@ class Product extends Model
         'tracking_type' => 'string',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $product): void {
+            $product->tracking_type ??= 'quantity';
+        });
+    }
+
     /**
      * Get the category.
      */
