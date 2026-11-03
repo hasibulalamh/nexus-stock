@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use App\Services\StockService;
 use App\Models\StockLevel;
+use Illuminate\Support\Facades\DB;
+use Picqer\Barcode\BarcodeGeneratorSVG;
+use Picqer\Barcode\BarcodeGenerator;
 
 class ProductController extends Controller
 {
@@ -61,7 +64,7 @@ class ProductController extends Controller
      */
     public function store(ProductRequest $request)
     {
-        $product = $this->saveProduct($request);
+        $product = DB::transaction(fn () => $this->saveProduct($request));
 
         return redirect()
             ->route('admin.products.list')
@@ -84,7 +87,7 @@ class ProductController extends Controller
      */
     public function update(ProductRequest $request, Product $product)
     {
-        $this->saveProduct($request, $product);
+        DB::transaction(fn () => $this->saveProduct($request, $product));
 
         return redirect()
             ->route('admin.products.list')
@@ -126,9 +129,9 @@ class ProductController extends Controller
 
         $attributes = [
             'sku' => $sku,
-            'barcode' => $request->barcode ? strtoupper(trim($request->barcode)) : null,
+            'barcode' => $request->filled('barcode') ? strtoupper(trim($request->barcode)) : $product?->barcode,
             'name' => $request->name,
-            'slug' => Str::slug($request->name . '-' . $sku),
+            'slug' => $request->slug,
             'description' => $request->description,
             'category_id' => $request->category_id,
             'brand_id' => $request->brand_id,
@@ -167,6 +170,10 @@ class ProductController extends Controller
             $result = Product::create($attributes);
         }
 
+        if (! $result->barcode) {
+            $result->update(['barcode' => Product::internalBarcodeForId($result->id)]);
+        }
+
         // Remove old image if replaced
         if ($oldImage && $oldImage !== $result->image) {
             $oldPath = public_path('uploads/product/' . $oldImage);
@@ -176,5 +183,56 @@ class ProductController extends Controller
         }
 
         return $result;
+    }
+
+    public function barcode(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'quantity' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'size' => ['nullable', 'in:50x30,40x25,a4'],
+        ]);
+
+        return view('admin.product.barcode', [
+            'labels' => $this->barcodeLabels(collect([$product]), (int) ($validated['quantity'] ?? 1)),
+            'sizes' => $this->barcodeSizes(),
+            'selectedSize' => $validated['size'] ?? '50x30',
+        ]);
+    }
+
+    public function bulkBarcode(Request $request)
+    {
+        $validated = $request->validate([
+            'product_ids' => ['required', 'array', 'min:1'],
+            'product_ids.*' => ['integer', 'exists:products,id'],
+            'quantities' => ['array'],
+            'quantities.*' => ['integer', 'min:1', 'max:200'],
+            'size' => ['nullable', 'in:50x30,40x25,a4'],
+        ]);
+        $products = Product::whereIn('id', $validated['product_ids'])->get();
+        $labels = collect();
+        foreach ($products as $product) {
+            $quantity = (int) ($validated['quantities'][$product->id] ?? 1);
+            $labels = $labels->concat($this->barcodeLabels(collect([$product]), $quantity));
+        }
+
+        return view('admin.product.barcode', [
+            'labels' => $labels,
+            'sizes' => $this->barcodeSizes(),
+            'selectedSize' => $validated['size'] ?? '50x30',
+        ]);
+    }
+
+    private function barcodeLabels($products, int $quantity)
+    {
+        $generator = new BarcodeGeneratorSVG();
+        return $products->flatMap(fn (Product $product) => collect(range(1, $quantity))->map(fn () => [
+            'product' => $product,
+            'svg' => $generator->getBarcode($product->barcode, BarcodeGenerator::TYPE_EAN_13),
+        ]));
+    }
+
+    private function barcodeSizes(): array
+    {
+        return ['50x30' => '50 x 30 mm', '40x25' => '40 x 25 mm', 'a4' => 'A4 sheet (3 x 8 grid)'];
     }
 }

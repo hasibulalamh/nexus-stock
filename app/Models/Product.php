@@ -50,6 +50,17 @@ class Product extends Model
         return $this->belongsTo(Brand::class);
     }
 
+    public static function internalBarcodeForId(int $id): string
+    {
+        $body = '2'.str_pad((string) $id, 11, '0', STR_PAD_LEFT);
+        $sum = 0;
+        foreach (str_split($body) as $index => $digit) {
+            $sum += (int) $digit * ($index % 2 === 0 ? 1 : 3);
+        }
+
+        return $body.(($sum * 9) % 10);
+    }
+
     /**
      * Get the image URL.
      */

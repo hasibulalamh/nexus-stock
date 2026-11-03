@@ -59,15 +59,18 @@
       @endif
     </form>
 
+    <form method="POST" action="{{ route('admin.products.barcode.bulk') }}" id="bulkBarcodeForm">
+      @csrf
     <div class="table-responsive">
       <table class="table table-hover align-middle nx-table">
         <thead>
           <tr>
-            <th class="nx-col-num">#</th>
+            <th class="nx-col-num"><input type="checkbox" id="selectAllProducts" aria-label="Select all products"></th>
             <th>Product</th>
             <th class="d-none d-md-table-cell">SKU</th>
             <th class="d-none d-lg-table-cell">Category</th>
             <th class="d-none d-lg-table-cell">Brand</th>
+            <th>Labels</th>
             <th>Price</th>
             <th>Status</th>
             <th class="text-end">Actions</th>
@@ -76,7 +79,7 @@
         <tbody>
           @forelse($products as $product)
           <tr>
-            <td class="text-muted">{{ $products->firstItem() + $loop->index }}</td>
+            <td><input type="checkbox" name="product_ids[]" value="{{ $product->id }}" class="product-checkbox" aria-label="Select {{ $product->name }}"></td>
 
             <td>
               <div class="d-flex align-items-center gap-3">
@@ -108,6 +111,8 @@
               @endif
             </td>
 
+            <td><input type="number" name="quantities[{{ $product->id }}]" value="1" min="1" max="200" class="form-control form-control-sm" style="width: 80px;" aria-label="Labels for {{ $product->name }}"></td>
+
             <td>
               <div class="text-end">
                 <div class="fw-semibold">${{ number_format($product->selling_price, 2) }}</div>
@@ -125,6 +130,12 @@
 
             <td class="text-end">
               <div class="d-inline-flex gap-1">
+                @can('products.view')
+                  <a href="{{ route('admin.products.barcode', $product) }}" class="nx-action"
+                     data-tip="Print barcode" aria-label="Print barcode for {{ $product->name }}">
+                    <i class="fas fa-barcode"></i>
+                  </a>
+                @endcan
                 @can('products.edit')
                   <a href="{{ route('admin.products.edit', $product->id) }}" class="nx-action"
                      data-tip="Edit" aria-label="Edit {{ $product->name }}">
@@ -144,11 +155,21 @@
                   </form>
                 @endcan
               </div>
+              <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+                <label for="bulkLabelSize" class="small text-muted">Label size</label>
+                <select id="bulkLabelSize" name="size" class="form-select form-select-sm w-auto">
+                  <option value="50x30">50 x 30 mm</option>
+                  <option value="40x25">40 x 25 mm</option>
+                  <option value="a4">A4 sheet (3 x 8 grid)</option>
+                </select>
+                <button type="submit" class="btn btn-outline-primary"><i class="fas fa-print"></i> Print selected barcodes</button>
+              </div>
+              </form>
             </td>
           </tr>
           @empty
           <tr>
-            <td colspan="8" class="text-center py-5">
+            <td colspan="9" class="text-center py-5">
               <i class="fas fa-box-open fs-3 d-block mb-2 text-muted"></i>
               <div class="fw-semibold">No products found</div>
               <div class="text-muted small">
@@ -190,3 +211,11 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.getElementById('selectAllProducts')?.addEventListener('change', function () {
+  document.querySelectorAll('.product-checkbox').forEach(function (checkbox) { checkbox.checked = this.checked; }, this);
+});
+</script>
+@endpush

@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Models\Category;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+use App\Models\Product;
 
 class ProductRequest extends FormRequest
 {
@@ -40,7 +42,7 @@ class ProductRequest extends FormRequest
                 Rule::unique('products', 'barcode')->ignore($productId),
             ],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category_id' => ['required', 'exists:categories,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
@@ -52,6 +54,31 @@ class ProductRequest extends FormRequest
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
             'status' => ['required', 'in:active,inactive'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $product = $this->route('product') ?? $this->route('id');
+        $productId = is_object($product) ? $product->getKey() : $product;
+        $slug = trim((string) $this->input('slug'));
+
+        if ($slug === '') {
+            $existingSlug = is_object($product) ? $product->slug : null;
+            $slug = $existingSlug ?: Str::slug((string) $this->input('name'));
+        }
+
+        $base = $slug ?: 'product';
+        $candidate = $base;
+        $suffix = 2;
+        while (Product::query()
+            ->where('slug', $candidate)
+            ->when($productId, fn ($query) => $query->where('id', '!=', $productId))
+            ->exists()) {
+            $candidate = "{$base}-{$suffix}";
+            $suffix++;
+        }
+
+        $this->merge(['slug' => $candidate]);
     }
 
     /**

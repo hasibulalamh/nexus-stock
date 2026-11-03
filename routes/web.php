@@ -153,6 +153,8 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('edit/{product}', [ProductController::class, 'edit'])->middleware('can:products.edit')->name('edit');
         Route::put('update/{product}', [ProductController::class, 'update'])->middleware('can:products.edit')->name('update');
         Route::delete('delete/{product}', [ProductController::class, 'delete'])->middleware('can:products.delete')->name('delete');
+        Route::get('{product}/barcode', [ProductController::class, 'barcode'])->middleware('can:products.view')->name('barcode');
+        Route::post('barcode/bulk', [ProductController::class, 'bulkBarcode'])->middleware('can:products.view')->name('barcode.bulk');
     });
 
     // warehouse
