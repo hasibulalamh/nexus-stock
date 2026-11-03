@@ -23,6 +23,7 @@ class Product extends Model
         'selling_price',
         'reorder_level',
         'track_stock',
+        'tracking_type',
         'image',
         'status',
     ];
@@ -32,6 +33,7 @@ class Product extends Model
         'selling_price' => 'decimal:2',
         'reorder_level' => 'decimal:3',
         'track_stock' => 'boolean',
+        'tracking_type' => 'string',
     ];
 
     /**
@@ -48,6 +50,16 @@ class Product extends Model
     public function brand()
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function stockUnits()
+    {
+        return $this->hasMany(StockUnit::class);
+    }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
     }
 
     public static function internalBarcodeForId(int $id): string

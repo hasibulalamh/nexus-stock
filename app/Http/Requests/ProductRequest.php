@@ -51,6 +51,7 @@ class ProductRequest extends FormRequest
             'selling_price' => ['required', 'numeric', 'min:0'],
             'reorder_level' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'track_stock' => ['required', 'boolean'],
+            'tracking_type' => ['required', 'in:quantity,serial'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
             'status' => ['required', 'in:active,inactive'],
         ];
@@ -78,7 +79,10 @@ class ProductRequest extends FormRequest
             $suffix++;
         }
 
-        $this->merge(['slug' => $candidate]);
+        $this->merge([
+            'slug' => $candidate,
+            'tracking_type' => $this->input('tracking_type', 'quantity'),
+        ]);
     }
 
     /**

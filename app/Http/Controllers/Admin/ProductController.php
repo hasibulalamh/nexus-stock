@@ -140,6 +140,7 @@ class ProductController extends Controller
             'selling_price' => $request->selling_price,
             'reorder_level' => $request->reorder_level,
             'track_stock' => $request->boolean('track_stock'),
+            'tracking_type' => $request->tracking_type,
             'status' => $request->status,
         ];
 
@@ -155,6 +156,12 @@ class ProductController extends Controller
         }
 
         if ($product) {
+            if ($product->tracking_type !== $request->tracking_type
+                && ($product->stockUnits()->exists() || $product->stockMovements()->exists())) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'tracking_type' => 'Tracking cannot be changed after stock movements or units exist.',
+                ]);
+            }
             $reorderLevelChanged = (string) $product->reorder_level !== (string) $request->reorder_level;
             $product->update($attributes);
             $result = $product;

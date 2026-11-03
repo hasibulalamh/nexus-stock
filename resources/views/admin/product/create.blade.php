@@ -140,6 +140,20 @@
           </div>
 
           <div class="col-md-4">
+            <label class="form-label d-block">Tracking</label>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="tracking_type" id="tracking_quantity" value="quantity" @checked(old('tracking_type', 'quantity') === 'quantity')>
+              <label class="form-check-label" for="tracking_quantity">Quantity</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="tracking_type" id="tracking_serial" value="serial" @checked(old('tracking_type') === 'serial')>
+              <label class="form-check-label" for="tracking_serial">Serial</label>
+            </div>
+            <small class="text-muted d-block">Serial tracking records each physical unit separately.</small>
+            @error('tracking_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+          </div>
+
+          <div class="col-md-4">
             <label class="form-label required" for="status">Status</label>
             <select name="status" id="status" class="form-select @error('status') is-invalid @enderror" required>
               <option value="active" @selected(old('status', 'active') === 'active')>Active</option>

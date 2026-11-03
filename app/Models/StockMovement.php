@@ -40,6 +40,11 @@ class StockMovement extends Model
         return $this->belongsTo(User::class, 'performed_by');
     }
 
+    public function units()
+    {
+        return $this->belongsToMany(StockUnit::class, 'stock_movement_units');
+    }
+
     public function location()
     {
         return $this->location_type === 'branch'

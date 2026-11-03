@@ -71,6 +71,7 @@
             <th class="d-none d-lg-table-cell">Category</th>
             <th class="d-none d-lg-table-cell">Brand</th>
             <th>Labels</th>
+            <th>Tracking</th>
             <th>Price</th>
             <th>Status</th>
             <th class="text-end">Actions</th>
@@ -112,6 +113,7 @@
             </td>
 
             <td><input type="number" name="quantities[{{ $product->id }}]" value="1" min="1" max="200" class="form-control form-control-sm" style="width: 80px;" aria-label="Labels for {{ $product->name }}"></td>
+            <td><span class="badge {{ $product->tracking_type === 'serial' ? 'bg-info' : 'bg-secondary' }}">{{ ucfirst($product->tracking_type) }}</span></td>
 
             <td>
               <div class="text-end">
@@ -169,7 +171,7 @@
           </tr>
           @empty
           <tr>
-            <td colspan="9" class="text-center py-5">
+            <td colspan="10" class="text-center py-5">
               <i class="fas fa-box-open fs-3 d-block mb-2 text-muted"></i>
               <div class="fw-semibold">No products found</div>
               <div class="text-muted small">
