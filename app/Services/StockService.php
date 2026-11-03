@@ -112,7 +112,7 @@ class StockService
                 string $locationType,
                 int $locationId,
                 array $serialNumbers = [],
-                int $quantity = 0,
+                string|int|float $quantity = 0,
                 bool $allowSystemCodes = false,
                 ?CarbonInterface $occurredAt = null,
                 ?string $notes = null,
@@ -124,14 +124,18 @@ class StockService
                 if (! StockAccess::canWrite($user, $locationType, $locationId)) {
                     throw new RuntimeException('You cannot write stock at this location.');
                 }
+                $quantityThousandths = $this->parseQuantity($quantity);
+                if ($quantityThousandths % 1000 !== 0) {
+                    throw new InvalidArgumentException('Serial quantities must be whole units.');
+                }
                 $serialNumbers = array_values(array_filter(array_map('trim', $serialNumbers), fn ($serial) => $serial !== ''));
                 if (count($serialNumbers) !== count(array_unique($serialNumbers))) {
                     throw new InvalidArgumentException('Duplicate serial numbers are not allowed.');
                 }
-                if ($serialNumbers === [] && (! $allowSystemCodes || $quantity < 1)) {
+                if ($serialNumbers === [] && (! $allowSystemCodes || $quantityThousandths < 1000)) {
                     throw new InvalidArgumentException('Provide serial numbers or explicitly enable system codes with a quantity.');
                 }
-                $count = $serialNumbers === [] ? $quantity : count($serialNumbers);
+                $count = $serialNumbers === [] ? intdiv($quantityThousandths, 1000) : count($serialNumbers);
                 if ($count < 1) {
                     throw new InvalidArgumentException('At least one unit is required.');
                 }
@@ -140,9 +144,11 @@ class StockService
                     if (StockMovement::query()->where('product_id', $product->id)->where('location_type', $locationType)->where('location_id', $locationId)->exists()) {
                         throw new InvalidArgumentException('Opening stock already exists. Use an adjustment for corrections.');
                     }
+                    $level = $this->lockedLevel($product->id, $locationType, $locationId);
                     $units = collect();
                     if ($serialNumbers !== []) {
-                        $existing = StockUnit::query()->where('product_id', $product->id)->whereIn('serial_no', $serialNumbers)->exists();
+                        $existing = StockUnit::query()->where('product_id', $product->id)->whereIn('serial_no', $serialNumbers)
+                            ->orderBy('id')->lockForUpdate()->exists();
                         if ($existing) {
                             throw new InvalidArgumentException('A serial number already exists for this product.');
                         }
@@ -161,7 +167,7 @@ class StockService
                     foreach ($units as $unit) {
                         $unit->update(['unit_code' => StockUnit::unitCodeForId($unit->id)]);
                     }
-                    $movement = $this->createSerialMovement($user, $product, $locationType, $locationId, StockMovementType::OPENING, $count * 1000, $units, null, $notes, null, $occurredAt);
+                    $movement = $this->createSerialMovement($user, $product, $locationType, $locationId, StockMovementType::OPENING, $count * 1000, $units, null, $notes, null, $occurredAt, $level);
                     return ['movement' => $movement, 'units' => $units];
                 });
             }
@@ -188,11 +194,13 @@ class StockService
                 }
 
                 return DB::transaction(function () use ($user, $product, $locationType, $locationId, $type, $delta, $reference, $notes, $batchUuid, $occurredAt, $unitIds): StockMovement {
-                    $units = StockUnit::query()->where('product_id', $product->id)->whereIn('id', $unitIds)->lockForUpdate()->get();
+                    $level = $this->lockedLevel($product->id, $locationType, $locationId);
+                    $units = StockUnit::query()->where('product_id', $product->id)->whereIn('id', $unitIds)
+                        ->orderBy('id')->lockForUpdate()->get();
                     if ($units->count() !== count(array_unique($unitIds)) || $units->contains(fn (StockUnit $unit) => $unit->status !== 'in_stock' || $unit->location_type !== $locationType || (int) $unit->location_id !== $locationId)) {
                         throw new InvalidArgumentException('Every unit must be in stock at the source location.');
                     }
-                    $movement = $this->createSerialMovement($user, $product, $locationType, $locationId, $type, $delta, $units, $reference, $notes, $batchUuid, $occurredAt);
+                    $movement = $this->createSerialMovement($user, $product, $locationType, $locationId, $type, $delta, $units, $reference, $notes, $batchUuid, $occurredAt, $level);
                     $outflow = $delta < 0 || in_array($type, [StockMovementType::SALE, StockMovementType::TRANSFER_OUT, StockMovementType::RETURN_OUT], true);
                     $units->each(fn (StockUnit $unit) => $unit->update([
                         'status' => $outflow ? 'sold' : 'in_stock',
@@ -215,8 +223,9 @@ class StockService
                 ?string $notes,
                 ?string $batchUuid,
                 ?CarbonInterface $occurredAt,
+                ?StockLevel $level = null,
             ): StockMovement {
-                $level = $this->lockedLevel($product->id, $locationType, $locationId);
+                $level ??= $this->lockedLevel($product->id, $locationType, $locationId);
                 $count = StockUnit::query()->inStockAt($locationType, $locationId)->where('product_id', $product->id)->count();
                 $after = $delta > 0 ? $count : $count + intdiv($delta, 1000);
                 if ($after < 0) {
@@ -278,15 +287,17 @@ class StockService
                 if ($unitIds === null || count($unitIds) !== (int) ($amount / 1000)) {
                     throw new InvalidArgumentException('Serial transfers require exact unit ids.');
                 }
+                // Always lock levels first in location order, then units by id.
+                $levels = $this->lockedLevels($product->id, $fromType, $fromId, $toType, $toId);
                 $units = StockUnit::query()->where('product_id', $product->id)->whereIn('id', $unitIds)
-                    ->lockForUpdate()->get();
+                    ->orderBy('id')->lockForUpdate()->get();
                 if ($units->count() !== count(array_unique($unitIds)) || $units->contains(fn (StockUnit $unit) => $unit->status !== 'in_stock' || $unit->location_type !== $fromType || (int) $unit->location_id !== $fromId)) {
                     throw new InvalidArgumentException('Every transfer unit must be in stock at the source location.');
                 }
-                $out = $this->createSerialMovement($user, $product, $fromType, $fromId, StockMovementType::TRANSFER_OUT, -$amount, $units, $reference, $notes, $batch, null);
+                $out = $this->createSerialMovement($user, $product, $fromType, $fromId, StockMovementType::TRANSFER_OUT, -$amount, $units, $reference, $notes, $batch, null, $this->levelFor($levels, $product->id, $fromType, $fromId));
                 $units->each(fn (StockUnit $unit) => $unit->update(['status' => 'in_transit', 'location_type' => null, 'location_id' => null]));
                 $units->each(fn (StockUnit $unit) => $unit->update(['status' => 'in_stock', 'location_type' => $toType, 'location_id' => $toId]));
-                $in = $this->createSerialMovement($user, $product, $toType, $toId, StockMovementType::TRANSFER_IN, $amount, $units, $reference, $notes, $batch, null);
+                $in = $this->createSerialMovement($user, $product, $toType, $toId, StockMovementType::TRANSFER_IN, $amount, $units, $reference, $notes, $batch, null, $this->levelFor($levels, $product->id, $toType, $toId));
                 return [$out, $in];
             }
             $out = $this->recordMovement($user, $product, $fromType, $fromId, StockMovementType::TRANSFER_OUT, $this->formatQuantity(-$amount), $reference, $notes, $batch);
@@ -396,6 +407,39 @@ class StockService
         return StockLevel::query()->where('product_id', $productId)
             ->where('location_type', $locationType)->where('location_id', $locationId)
             ->lockForUpdate()->firstOrFail();
+    }
+
+    /**
+     * Lock all levels in deterministic location order before any serial units.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, StockLevel>
+     */
+    private function lockedLevels(int $productId, string $firstType, int $firstId, string $secondType, int $secondId)
+    {
+        foreach ([[$firstType, $firstId], [$secondType, $secondId]] as [$type, $id]) {
+            StockLevel::query()->insertOrIgnore([
+                'product_id' => $productId,
+                'location_type' => $type,
+                'location_id' => $id,
+                'quantity' => '0.000',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return StockLevel::query()->where('product_id', $productId)
+            ->where(function ($query) use ($firstType, $firstId, $secondType, $secondId): void {
+                $query->where(fn ($q) => $q->where('location_type', $firstType)->where('location_id', $firstId))
+                    ->orWhere(fn ($q) => $q->where('location_type', $secondType)->where('location_id', $secondId));
+            })
+            ->orderBy('location_type')->orderBy('location_id')->orderBy('id')
+            ->lockForUpdate()->get();
+    }
+
+    private function levelFor($levels, int $productId, string $locationType, int $locationId): StockLevel
+    {
+        return $levels->first(fn (StockLevel $level): bool => $level->product_id === $productId
+            && $level->location_type === $locationType && $level->location_id === $locationId);
     }
 
     public function syncAlertForLevel(StockLevel $stockLevel): void
