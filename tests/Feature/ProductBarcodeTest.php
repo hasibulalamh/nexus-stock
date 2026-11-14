@@ -100,18 +100,74 @@ class ProductBarcodeTest extends TestCase
     public function test_barcode_label_page_requires_view_permission_and_validates_quantity(): void
     {
         $product = Product::create(array_merge($this->payload(), ['slug' => 'label-product', 'barcode' => '5901234123457']));
-        $user = $this->admin->replicate();
-        $user->email = uniqid('label-user-').'@example.com';
-        $user->full_name = 'Label user';
-        $user->role_id = Role::create(['name' => 'label-user', 'guard_name' => 'web'])->id;
-        $user->access_all = false;
-        $user->save();
-        $user->syncRoles(['label-user']);
+        $user = $this->userWithPermissions('label-user', []);
 
         $this->actingAs($user)->get(route('admin.products.barcode', $product))->assertForbidden();
         $user->givePermissionTo('products.view');
         $this->actingAs($user)->get(route('admin.products.barcode', $product).'?quantity=0')->assertSessionHasErrors('quantity');
         $this->actingAs($user)->get(route('admin.products.barcode', $product))->assertOk()->assertSee('Sample product');
+    }
+
+    public function test_product_list_has_a_separate_post_barcode_form_and_delete_forms_remain_delete_forms(): void
+    {
+        $product = Product::create(array_merge($this->payload(), [
+            'slug' => 'listed-product',
+            'barcode' => '5901234123457',
+        ]));
+
+        $response = $this->actingAs($this->userWithPermissions('list-viewer', ['products.view']))
+            ->get(route('admin.products.list'))
+            ->assertOk();
+
+        $document = $this->document($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $barcodeForm = $xpath->query("//form[@id='bulkBarcodeForm']")->item(0);
+
+        $this->assertNotNull($barcodeForm);
+        $this->assertSame('post', strtolower($barcodeForm->attributes->getNamedItem('method')->nodeValue));
+        $this->assertSame(0, $xpath->query(".//input[@name='_method']", $barcodeForm)->length);
+        $this->assertSame(0, $xpath->query("ancestor::form", $barcodeForm)->length);
+        $this->assertSame(1, $xpath->query("//input[@name='product_ids[]' and @form='bulkBarcodeForm']")->length);
+        $this->assertSame(1, $xpath->query("//input[@name='quantities[{$product->id}]' and @form='bulkBarcodeForm']")->length);
+
+        $adminDocument = $this->document($this->actingAs($this->admin)->get(route('admin.products.list'))->getContent());
+        $adminXpath = new \DOMXPath($adminDocument);
+        $deleteForm = $adminXpath->query("//form[contains(@action, '/admin/products/delete/')]")->item(0);
+
+        $this->assertNotNull($deleteForm);
+        $this->assertSame('post', strtolower($deleteForm->attributes->getNamedItem('method')->nodeValue));
+        $this->assertSame('DELETE', strtoupper($adminXpath->query(".//input[@name='_method']", $deleteForm)->item(0)->attributes->getNamedItem('value')->nodeValue));
+    }
+
+    public function test_bulk_barcode_print_accepts_selected_products_and_quantities(): void
+    {
+        $first = Product::create(array_merge($this->payload(), [
+            'slug' => 'first-bulk-product',
+            'barcode' => '5901234123457',
+        ]));
+        $second = Product::create(array_merge($this->payload(), [
+            'slug' => 'second-bulk-product',
+            'barcode' => '5901234123464',
+        ]));
+
+        $response = $this->actingAs($this->userWithPermissions('bulk-viewer', ['products.view']))
+            ->post(route('admin.products.barcode.bulk'), [
+                'product_ids' => [$first->id, $second->id],
+                'quantities' => [$first->id => 2, $second->id => 3],
+                'size' => '40x25',
+            ]);
+
+        $response->assertOk()
+            ->assertSee($first->name)
+            ->assertSee($second->name);
+        $this->assertSame(5, substr_count($response->getContent(), 'barcode-label size-40x25'));
+    }
+
+    public function test_bulk_barcode_print_rejects_an_empty_selection(): void
+    {
+        $this->actingAs($this->userWithPermissions('empty-selection-viewer', ['products.view']))
+            ->post(route('admin.products.barcode.bulk'), ['product_ids' => []])
+            ->assertSessionHasErrors('product_ids');
     }
 
     public function test_barcode_generation_dry_run_does_not_change_products(): void
@@ -132,5 +188,27 @@ class ProductBarcodeTest extends TestCase
         }
 
         return (10 - ($sum % 10)) % 10;
+    }
+
+    private function userWithPermissions(string $name, array $permissions): User
+    {
+        $user = $this->admin->replicate();
+        $user->email = uniqid($name.'-'). '@example.com';
+        $user->full_name = ucfirst($name);
+        $user->role_id = Role::create(['name' => $name, 'guard_name' => 'web'])->id;
+        $user->access_all = false;
+        $user->save();
+        $user->syncRoles([$name]);
+        $user->givePermissionTo($permissions);
+
+        return $user;
+    }
+
+    private function document(string $html): \DOMDocument
+    {
+        $document = new \DOMDocument();
+        @$document->loadHTML($html);
+
+        return $document;
     }
 }

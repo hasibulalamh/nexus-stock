@@ -59,8 +59,17 @@
       @endif
     </form>
 
-    <form method="POST" action="{{ route('admin.products.barcode.bulk') }}" id="bulkBarcodeForm">
+    <form method="POST" action="{{ route('admin.products.barcode.bulk') }}" id="bulkBarcodeForm" class="d-flex justify-content-end align-items-center gap-2 mb-3">
       @csrf
+      <label for="bulkLabelSize" class="small text-muted">Label size</label>
+      <select id="bulkLabelSize" name="size" class="form-select form-select-sm w-auto">
+        <option value="50x30">50 x 30 mm</option>
+        <option value="40x25">40 x 25 mm</option>
+        <option value="a4">A4 sheet (3 x 8 grid)</option>
+      </select>
+      <button type="submit" class="btn btn-outline-primary"><i class="fas fa-print"></i> Print selected barcodes</button>
+    </form>
+
     <div class="table-responsive">
       <table class="table table-hover align-middle nx-table">
         <thead>
@@ -80,7 +89,7 @@
         <tbody>
           @forelse($products as $product)
           <tr>
-            <td><input type="checkbox" name="product_ids[]" value="{{ $product->id }}" class="product-checkbox" aria-label="Select {{ $product->name }}"></td>
+            <td><input type="checkbox" name="product_ids[]" value="{{ $product->id }}" form="bulkBarcodeForm" class="product-checkbox" aria-label="Select {{ $product->name }}"></td>
 
             <td>
               <div class="d-flex align-items-center gap-3">
@@ -112,7 +121,7 @@
               @endif
             </td>
 
-            <td><input type="number" name="quantities[{{ $product->id }}]" value="1" min="1" max="200" class="form-control form-control-sm" style="width: 80px;" aria-label="Labels for {{ $product->name }}"></td>
+            <td><input type="number" name="quantities[{{ $product->id }}]" value="1" min="1" max="200" form="bulkBarcodeForm" class="form-control form-control-sm" style="width: 80px;" aria-label="Labels for {{ $product->name }}"></td>
             <td><span class="badge {{ $product->tracking_type === 'serial' ? 'bg-info' : 'bg-secondary' }}">{{ ucfirst($product->tracking_type) }}</span></td>
 
             <td>
@@ -157,16 +166,6 @@
                   </form>
                 @endcan
               </div>
-              <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
-                <label for="bulkLabelSize" class="small text-muted">Label size</label>
-                <select id="bulkLabelSize" name="size" class="form-select form-select-sm w-auto">
-                  <option value="50x30">50 x 30 mm</option>
-                  <option value="40x25">40 x 25 mm</option>
-                  <option value="a4">A4 sheet (3 x 8 grid)</option>
-                </select>
-                <button type="submit" class="btn btn-outline-primary"><i class="fas fa-print"></i> Print selected barcodes</button>
-              </div>
-              </form>
             </td>
           </tr>
           @empty
