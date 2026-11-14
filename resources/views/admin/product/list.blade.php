@@ -126,8 +126,8 @@
 
             <td>
               <div class="text-end">
-                <div class="fw-semibold">${{ number_format($product->selling_price, 2) }}</div>
-                <div class="text-muted small">Cost: ${{ number_format($product->cost_price, 2) }}</div>
+                <div class="fw-semibold">{{ \App\Support\Money::format($product->selling_price) }}</div>
+                <div class="text-muted small">Cost: {{ \App\Support\Money::format($product->cost_price) }}</div>
               </div>
             </td>
 

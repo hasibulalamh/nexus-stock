@@ -95,7 +95,7 @@
           <div class="col-md-4">
             <label class="form-label required" for="cost_price">Cost Price</label>
             <div class="input-group">
-              <span class="input-group-text">$</span>
+              <span class="input-group-text">{{ config('currency.symbol') }}</span>
               <input type="number" name="cost_price" id="cost_price" value="{{ old('cost_price', 0) }}"
                      class="form-control @error('cost_price') is-invalid @enderror" step="0.01" min="0" required>
             </div>
@@ -105,7 +105,7 @@
           <div class="col-md-4">
             <label class="form-label required" for="selling_price">Selling Price</label>
             <div class="input-group">
-              <span class="input-group-text">$</span>
+              <span class="input-group-text">{{ config('currency.symbol') }}</span>
               <input type="number" name="selling_price" id="selling_price" value="{{ old('selling_price', 0) }}"
                      class="form-control @error('selling_price') is-invalid @enderror" step="0.01" min="0" required>
             </div>

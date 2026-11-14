@@ -170,6 +170,34 @@ class ProductBarcodeTest extends TestCase
             ->assertSessionHasErrors('product_ids');
     }
 
+    public function test_product_price_views_use_the_configured_currency_symbol(): void
+    {
+        $product = Product::create(array_merge($this->payload(), [
+            'slug' => 'currency-product',
+            'cost_price' => '1234.50',
+            'selling_price' => '600.00',
+            'barcode' => '5901234123457',
+        ]));
+        $user = $this->userWithPermissions('currency-viewer', ['products.view', 'products.create', 'products.edit']);
+
+        config(['currency.symbol' => 'Tk ']);
+
+        $this->actingAs($user)->get(route('admin.products.list'))
+            ->assertOk()
+            ->assertSee('Tk 600.00')
+            ->assertSee('Cost: Tk 1,234.50')
+            ->assertDontSee('$600.00')
+            ->assertDontSee('$1,234.50');
+        $this->actingAs($user)->get(route('admin.products.create'))
+            ->assertOk()
+            ->assertSee('class="input-group-text">Tk </span>', false)
+            ->assertDontSee('class="input-group-text">$</span>', false);
+        $this->actingAs($user)->get(route('admin.products.edit', $product))
+            ->assertOk()
+            ->assertSee('class="input-group-text">Tk </span>', false)
+            ->assertDontSee('class="input-group-text">$</span>', false);
+    }
+
     public function test_barcode_generation_dry_run_does_not_change_products(): void
     {
         $product = Product::create(array_merge($this->payload(), ['slug' => 'dry-run-product', 'barcode' => null]));

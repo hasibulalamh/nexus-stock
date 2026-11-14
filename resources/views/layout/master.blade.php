@@ -79,7 +79,7 @@
         data: {
           labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
           datasets: [{
-            label: "Sales ($)",
+            label: "Sales ({{ config('currency.symbol') }})",
             fill: true,
             backgroundColor: gradient,
             borderColor: window.theme.primary,
