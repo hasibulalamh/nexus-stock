@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Admin\StockUnitController;
 use App\Http\Controllers\Admin\OpeningStockRequestController;
 use App\Http\Controllers\Admin\AdjustmentController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\StockCountController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\SupplierController;
@@ -177,6 +178,21 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::post('{stockCount}/acknowledge-drift', [StockCountController::class, 'acknowledgeDrift'])->middleware('can:counts.create')->name('acknowledge-drift');
         Route::post('{stockCount}/cancel', [StockCountController::class, 'cancel'])->middleware('can:counts.create')->name('cancel');
     });
+
+    // reports and stock KPIs
+    Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
+        Route::get('/', [ReportController::class, 'index'])->middleware('can:reports.view')->name('index');
+        Route::get('valuation', [ReportController::class, 'valuation'])->middleware('can:reports.view')->name('valuation');
+        Route::get('low-stock', [ReportController::class, 'lowStock'])->middleware('can:reports.view')->name('low-stock');
+        Route::get('movements', [ReportController::class, 'movements'])->middleware('can:reports.view')->name('movements');
+        Route::get('transfers', [ReportController::class, 'transfers'])->middleware('can:reports.view')->name('transfers');
+        Route::get('discrepancies', [ReportController::class, 'discrepancies'])->middleware('can:reports.view')->name('discrepancies');
+        Route::get('purchases', [ReportController::class, 'purchases'])->middleware('can:reports.view')->name('purchases');
+        Route::get('adjustments', [ReportController::class, 'adjustments'])->middleware('can:reports.view')->name('adjustments');
+        Route::get('backorders', [ReportController::class, 'backorders'])->middleware('can:reports.view')->name('backorders');
+        Route::get('stock-on-hand', [ReportController::class, 'stockOnHand'])->middleware('can:reports.view')->name('stock-on-hand');
+    });
+    Route::get('stock/kpi', [ReportController::class, 'kpi'])->middleware('can:stock.kpi.view')->name('stock.kpi');
 
     // suppliers, purchase orders and goods receipts
     Route::group(['prefix' => 'suppliers', 'as' => 'suppliers.'], function () {

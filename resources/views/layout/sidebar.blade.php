@@ -133,7 +133,7 @@
             </ul>
         @endcanany
 
-        @canany(['stock.view', 'stock.movements.view', 'stock.alerts.view', 'stock.opening', 'stock.opening.approve', 'transfers.view', 'adjustments.view', 'counts.view'])
+        @canany(['stock.view', 'stock.movements.view', 'stock.alerts.view', 'stock.opening', 'stock.opening.approve', 'transfers.view', 'adjustments.view', 'counts.view', 'reports.view', 'stock.kpi.view'])
             <span class="ns-group">Stock</span>
             <ul class="ns-nav">
                 @can('stock.view')
@@ -177,6 +177,16 @@
                 @can('counts.view')
                     <li><a class="ns-link {{ request()->routeIs('admin.counts.*') ? 'active' : '' }}" href="{{ route('admin.counts.index') }}">
                         <span class="ns-ico"><i class="fas fa-clipboard-check"></i></span><span>Stock counts</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('stock.kpi.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.stock.kpi') ? 'active' : '' }}" href="{{ route('admin.stock.kpi') }}">
+                        <span class="ns-ico"><i class="fas fa-chart-line"></i></span><span>Stock KPIs</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('reports.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">
+                        <span class="ns-ico"><i class="fas fa-chart-column"></i></span><span>Reports</span><i class="ns-dot"></i>
                     </a></li>
                 @endcan
                 @canany(['stock.opening', 'stock.opening.approve'])

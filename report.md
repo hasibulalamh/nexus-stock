@@ -539,3 +539,50 @@ Last full run: **238 tests, 1068 assertions** (`php artisan test`, SQLite).
 Known limitations / unverified: counts exclude serial-tracked products; a
 rejected count adjustment cancels the count (no separate rejected status);
 MySQL concurrency and browser printing/scanning unverified.
+
+## Phase E - Reports, KPIs and dashboard
+
+Status: **done** (same commit as this report update).
+
+No new migrations. No new tables.
+
+Routes added (`/admin` prefix):
+
+- `admin.reports.index` (`/reports`)
+- `admin.reports.valuation|low-stock|movements|transfers|discrepancies|purchases|adjustments|backorders|stock-on-hand` (`/reports/{key}`)
+- `admin.stock.kpi` (`/stock/kpi`)
+
+Permissions added: `reports.view`, `stock.kpi.view` (in `PermissionSeeder`).
+
+Behaviour:
+
+- One generic, paginated report table view (`admin/reports/table.blade.php`)
+  with date, location-type, location, product and status filters; every query
+  is scoped through `StockAccess` / model `visibleTo` scopes. CSV export uses
+  the same scoped query and streams the current filtered rows.
+- Reports: stock valuation by location (qty x `cost_price`, `Money::format`),
+  low stock/below minimum (effective minimum = level override else
+  `reorder_level`, branch stock only), movement summary, transfer lead times
+  (created/sent/received), open+resolved discrepancies, supplier purchases
+  with receipts/value, adjustments/damage, backorder aging, stock on hand by
+  product with in-stock serial counts.
+- KPI dashboard: open alerts, pending opening/adjustment/count approvals,
+  fill rate (sent/requested over 30/90/365 days), service level (branch
+  product-levels at/above minimum), average sent-to-received hours,
+  discrepancy rate, damaged %. Inventory turnover is shown as an explicitly
+  labelled missing-data placeholder ("Requires a Sales module") — no fake
+  values.
+- Sidebar: Stock -> Reports (reports.view) and Stock dashboard
+  (stock.kpi.view).
+
+Tests added: `tests/Feature/ReportTest.php` (6 tests) — nine reports plus KPI
+on a small fixture with transfer/partial receipt/GRN/adjustment/serial data,
+CSV export, KPI percentages, location scoping (empty for outsiders),
+permissions, and page renders.
+
+Last full run: **244 tests, 1139 assertions** (`php artisan test`, SQLite).
+
+Known limitations / unverified: reports read committed data only (no
+materialised snapshots); CSV has no BOM; very large exports stream row-by-row
+but are not queued; KPI turnover intentionally blank; MySQL query plans and
+browser printing unverified.
