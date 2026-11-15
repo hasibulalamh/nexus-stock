@@ -133,7 +133,7 @@
             </ul>
         @endcanany
 
-        @canany(['stock.view', 'stock.movements.view', 'stock.alerts.view', 'stock.opening'])
+        @canany(['stock.view', 'stock.movements.view', 'stock.alerts.view', 'stock.opening', 'stock.opening.approve'])
             <span class="ns-group">Stock</span>
             <ul class="ns-nav">
                 @can('stock.view')
@@ -164,6 +164,21 @@
                         <span class="ns-ico"><i class="fas fa-boxes-stacked"></i></span><span>Opening stock</span><i class="ns-dot"></i>
                     </a></li>
                 @endcan
+                @canany(['stock.opening', 'stock.opening.approve'])
+                    <li><a class="ns-link {{ request()->routeIs('admin.stock.requests.*') ? 'active' : '' }}" href="{{ route('admin.stock.requests.index') }}">
+                        <span class="ns-ico"><i class="fas fa-file-circle-check"></i></span><span>Stock requests</span>
+                        @can('stock.opening.approve')
+                            @php($pendingStockRequests = \App\Models\OpeningStockRequest::query()->where('status', 'pending')->where(function ($scope) {
+                                foreach (['branch', 'warehouse'] as $type) {
+                                    $ids = $type === 'branch' ? auth()->user()->accessibleBranchIds() : auth()->user()->accessibleWarehouseIds();
+                                    $scope->orWhere(fn ($q) => $q->where('location_type', $type)->when($ids !== null, fn ($q) => $q->whereIn('location_id', $ids)));
+                                }
+                            })->count())
+                            @if($pendingStockRequests)<span class="badge bg-warning ms-auto">{{ $pendingStockRequests }}</span>@endif
+                        @endcan
+                        <i class="ns-dot"></i>
+                    </a></li>
+                @endcanany
             </ul>
         @endcanany
 

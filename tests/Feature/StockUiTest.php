@@ -91,21 +91,23 @@ class StockUiTest extends TestCase
         }
     }
 
-    public function test_opening_stock_is_recorded_once_and_second_opening_is_rejected(): void
+    public function test_opening_stock_submission_is_pending_and_second_pending_opening_is_rejected(): void
     {
         $warehouse = $this->warehouse();
         $product = $this->product();
         $user = $this->superadmin;
         $response = $this->actingAs($user)->post(route('admin.stock.opening.store'), [
-            'location_type' => 'warehouse', 'location_id' => $warehouse->id, 'product_id' => $product->id,
-            'quantity' => '1.000', 'occurred_at' => '2026-11-03', 'notes' => 'Initial',
-        ])->assertRedirect(route('admin.stock.levels'));
-        $this->assertDatabaseCount('stock_movements', 1);
+            'location_type' => 'warehouse', 'location_id' => $warehouse->id,
+            'lines' => [['product_id' => $product->id, 'quantity' => '1.000']],
+            'occurred_at' => '2026-11-03', 'notes' => 'Initial',
+        ])->assertRedirect();
+        $this->assertDatabaseCount('stock_movements', 0);
+        $this->assertDatabaseHas('opening_stock_requests', ['status' => 'pending']);
 
         $this->actingAs($user)->from(route('admin.stock.opening'))->post(route('admin.stock.opening.store'), [
-            'location_type' => 'warehouse', 'location_id' => $warehouse->id, 'product_id' => $product->id,
-            'quantity' => '2.000', 'occurred_at' => '2026-11-03',
-        ])->assertSessionHasErrors('quantity');
+            'location_type' => 'warehouse', 'location_id' => $warehouse->id,
+            'lines' => [['product_id' => $product->id, 'quantity' => '2.000']], 'occurred_at' => '2026-11-03',
+        ])->assertSessionHasErrors('request');
     }
 
     public function test_opening_stock_rejects_invalid_quantity_and_unwritable_location(): void
@@ -114,9 +116,10 @@ class StockUiTest extends TestCase
         $product = $this->product();
         foreach (['0', '-1', '1.0001'] as $quantity) {
             $this->actingAs($this->superadmin)->post(route('admin.stock.opening.store'), [
-                'location_type' => 'warehouse', 'location_id' => $warehouse->id, 'product_id' => $product->id,
-                'quantity' => $quantity, 'occurred_at' => '2026-11-03',
-            ])->assertSessionHasErrors('quantity');
+                'location_type' => 'warehouse', 'location_id' => $warehouse->id,
+                'lines' => [['product_id' => $product->id, 'quantity' => $quantity]],
+                'occurred_at' => '2026-11-03',
+            ])->assertSessionHasErrors('lines.0.quantity');
         }
 
         $user = $this->superadmin->replicate();
@@ -129,8 +132,8 @@ class StockUiTest extends TestCase
         $user->syncRoles(['limited-ui']);
         $user->givePermissionTo('stock.opening');
         $response = $this->actingAs($user)->post(route('admin.stock.opening.store'), [
-            'location_type' => 'warehouse', 'location_id' => $warehouse->id, 'product_id' => $product->id,
-            'quantity' => '1.000', 'occurred_at' => '2026-11-03',
+            'location_type' => 'warehouse', 'location_id' => $warehouse->id,
+            'lines' => [['product_id' => $product->id, 'quantity' => '1.000']], 'occurred_at' => '2026-11-03',
         ]);
         $response->assertForbidden();
     }

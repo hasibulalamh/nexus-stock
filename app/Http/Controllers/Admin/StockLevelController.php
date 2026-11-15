@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockUnit;
 use Carbon\Carbon;
+use App\Services\OpeningStockRequestService;
 
 class StockLevelController
 {
@@ -82,38 +83,28 @@ class StockLevelController
         $validated = $request->validate([
             'location_type' => ['required', 'in:branch,warehouse'],
             'location_id' => ['required', 'integer'],
-            'product_id' => ['required', 'exists:products,id'],
-            'quantity' => ['nullable', 'numeric', 'gt:0', 'decimal:0,3'],
-            'serial_numbers' => ['nullable', 'string'],
-            'allow_system_codes' => ['nullable', 'boolean'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.product_id' => ['required', 'exists:products,id'],
+            'lines.*.quantity' => ['nullable', 'numeric', 'gt:0', 'decimal:0,3'],
+            'lines.*.serial_numbers_text' => ['nullable', 'string'],
+            'lines.*.use_system_codes' => ['nullable', 'boolean'],
             'occurred_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
         abort_unless(StockAccess::canWrite($request->user(), $validated['location_type'], (int) $validated['location_id']), 403);
-        $product = Product::findOrFail($validated['product_id']);
-        if ($product->tracking_type === 'quantity' && ! $request->filled('quantity')) {
-            return back()->withErrors(['quantity' => 'Quantity is required for quantity-tracked products.'])->withInput();
-        }
         try {
-            if ($product->tracking_type === 'serial') {
-                $result = app(StockService::class)->recordSerialOpening(
-                    $request->user(), $product, $validated['location_type'], (int) $validated['location_id'],
-                    preg_split('/\R/', (string) ($validated['serial_numbers'] ?? ''), -1, PREG_SPLIT_NO_EMPTY),
-                    (int) ($validated['quantity'] ?? 0), (bool) ($validated['allow_system_codes'] ?? false),
-                    Carbon::parse($validated['occurred_at']), $validated['notes'] ?? null,
-                );
-                return redirect()->route('admin.stock.units.labels', ['unit_ids' => $result['units']->pluck('id')->all()])
-                    ->with('success', 'Serial opening stock recorded.');
-            }
-            app(StockService::class)->recordOpening(
-                $request->user(), $product, $validated['location_type'], (int) $validated['location_id'],
-                $validated['quantity'], Carbon::parse($validated['occurred_at']), $validated['notes'] ?? null,
-            );
-        } catch (\InvalidArgumentException $exception) {
-            return back()->withErrors(['quantity' => $exception->getMessage()])->withInput();
+            $lines = array_map(fn (array $line) => [
+                'product_id' => $line['product_id'],
+                'quantity' => $line['quantity'] ?? 0,
+                'serial_numbers' => preg_split('/\R/', (string) ($line['serial_numbers_text'] ?? ''), -1, PREG_SPLIT_NO_EMPTY),
+                'use_system_codes' => (bool) ($line['use_system_codes'] ?? false),
+            ], $validated['lines']);
+            $newRequest = app(OpeningStockRequestService::class)->submit($request->user(), $validated + ['lines' => $lines]);
+        } catch (\InvalidArgumentException|\RuntimeException $exception) {
+            return back()->withErrors(['request' => $exception->getMessage()])->withInput();
         }
 
-        return redirect()->route('admin.stock.levels')->with('success', 'Opening stock recorded.');
+        return redirect()->route('admin.stock.requests.show', $newRequest)->with('success', 'Opening stock request submitted for approval.');
     }
 
     public function setMinimum(Request $request, StockLevel $stockLevel)
