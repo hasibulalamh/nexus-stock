@@ -482,6 +482,67 @@ class StockService
     }
 
     /**
+     * Purchase serial units: every serial number becomes a new in-stock unit
+     * at the receiving warehouse, posted as one purchase movement.
+     *
+     * @return array{movement: StockMovement, units: \Illuminate\Support\Collection<int, StockUnit>}
+     */
+    public function recordSerialPurchase(
+        User $user,
+        Product $product,
+        string $locationType,
+        int $locationId,
+        array $serialNumbers,
+        ?array $reference = null,
+        ?string $notes = null,
+        ?CarbonInterface $occurredAt = null,
+    ): array {
+        $product = $this->validatedProduct($product);
+        $this->validateLocation($locationType, $locationId);
+        if ($product->tracking_type !== 'serial') {
+            throw new InvalidArgumentException('Serial purchase is only available for serial-tracked products.');
+        }
+        if (! StockAccess::canWrite($user, $locationType, $locationId)) {
+            throw new RuntimeException('You cannot write stock at this location.');
+        }
+        $serialNumbers = array_values(array_filter(array_map('trim', $serialNumbers), fn ($serial) => $serial !== ''));
+        if ($serialNumbers === []) {
+            throw new InvalidArgumentException('Provide at least one serial number.');
+        }
+        if (count($serialNumbers) !== count(array_unique($serialNumbers))) {
+            throw new InvalidArgumentException('Duplicate serial numbers are not allowed.');
+        }
+
+        return DB::transaction(function () use ($user, $product, $locationType, $locationId, $serialNumbers, $reference, $notes, $occurredAt): array {
+            $level = $this->lockedLevel($product->id, $locationType, $locationId);
+            if (StockUnit::query()->where('product_id', $product->id)->whereIn('serial_no', $serialNumbers)->exists()) {
+                throw new InvalidArgumentException('A serial number already exists for this product.');
+            }
+            $units = collect();
+            foreach ($serialNumbers as $serial) {
+                $units->push(StockUnit::create([
+                    'product_id' => $product->id,
+                    'serial_no' => $serial,
+                    'unit_code' => 'pending-'.str()->uuid(),
+                    'status' => 'in_stock',
+                    'location_type' => $locationType,
+                    'location_id' => $locationId,
+                    'received_at' => $occurredAt ?? now(),
+                ]));
+            }
+            foreach ($units as $unit) {
+                $unit->update(['unit_code' => StockUnit::unitCodeForId($unit->id)]);
+            }
+            $movement = $this->createSerialMovement(
+                $user, $product, $locationType, $locationId, StockMovementType::PURCHASE,
+                $units->count() * 1000, $units, $reference, $notes, null, $occurredAt, $level,
+            );
+
+            return ['movement' => $movement, 'units' => $units];
+        });
+    }
+
+    /**
      * Move in-stock serial units out of a location into transit (transfer or
      * return dispatch). The units leave the level immediately; they only
      * return to stock when receiveSerialUnits() runs.

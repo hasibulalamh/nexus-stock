@@ -438,3 +438,52 @@ Last full run: **217 tests, 889 assertions** (`php artisan test`, SQLite).
 Known limitations / unverified: MySQL concurrency, browser rendering of the
 new modals, and printing are unverified. "Lost" discrepancies deliberately
 record no stock movement (documented above).
+
+## Phase C - Suppliers, purchase orders, goods receipts
+
+Status: **done**. Phase B commit: `c1c5540`.
+
+Migration added: `2026_11_17_000004_create_purchasing_tables.php` —
+`suppliers` (soft deletes), `purchase_orders`, `purchase_order_lines`,
+`goods_receipts`, `goods_receipt_lines` (accepted/damaged/short/returned,
+serial numbers json), with short explicit index names.
+
+Routes added:
+
+- `admin.suppliers.index/create/store/edit/update/delete`
+- `admin.purchases.index/create/store/show/edit/update/approve/cancel/print`
+- `admin.receiving.index/create/store/show/post/supplier-return/print`
+
+Behaviour:
+
+- Supplier CRUD with unique code; deletion is refused while open purchase
+  orders exist; activity log via `RecordsActivity`.
+- Purchase orders: `PO-YYYY-NNNNNN` via `DocumentNumber`, draft/ordered based
+  on `stock.purchases.require_approval`; approve (draft -> ordered), edit
+  (draft only), cancel (draft/ordered/partial), printable PO.
+- Goods receipts: created as a **draft** from a PO with the outstanding
+  quantity prefilled, then posted explicitly. Posting locks the GRN and PO,
+  is rejected twice, validates over-receipt against the outstanding quantity
+  (config `STOCK_ALLOW_OVER_RECEIPT`), posts `purchase` movements through
+  `StockService` (or `recordSerialPurchase()` for serial products), updates
+  PO line `received_qty` and PO status (`partial`/`received`).
+- Damaged/short quantities are stored on the GRN line and never enter stock.
+  Supplier return posts `return_out` at the warehouse, capped by
+  `damaged_qty - returned_qty`; serial damaged units are refused because they
+  never entered stock.
+- Optional product cost update on posting: `STOCK_PO_COST_UPDATE=off|last|
+  weighted_average` (default off).
+- Warehouse users only see POs/GRNs of their warehouses; all services also
+  enforce permissions and `StockAccess::canWrite`.
+
+Tests added: `tests/Feature/PurchaseTest.php` (11 tests) — supplier CRUD and
+delete guard, PO lifecycle with partial then full receipt, damaged/short
+handling, serial purchase units, over-receipt rejection and config override,
+double post rejection, supplier return cap, cost update, scoping, 403s, page
+renders and HTTP receipt flow. Ledger rebuild stays clean.
+
+Last full run: **228 tests, 988 assertions** (`php artisan test`, SQLite).
+
+Known limitations / unverified: no PO line editing after ordering, no partial
+supplier-return UI for serial units, MySQL concurrency and browser printing
+unverified.

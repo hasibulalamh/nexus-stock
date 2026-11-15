@@ -17,6 +17,9 @@ use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Admin\StockUnitController;
 use App\Http\Controllers\Admin\OpeningStockRequestController;
 use App\Http\Controllers\Admin\TransferController;
+use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\PurchaseOrderController;
+use App\Http\Controllers\Admin\GoodsReceiptController;
 use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Warehouse\WarehouseController;
 use Illuminate\Support\Facades\Auth;
@@ -147,6 +150,38 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::post('{transfer}/send', [TransferController::class, 'send'])->middleware('can:transfers.send')->name('send');
         Route::post('{transfer}/receive', [TransferController::class, 'receive'])->middleware('can:transfers.receive')->name('receive');
         Route::post('{transfer}/cancel', [TransferController::class, 'cancel'])->middleware('can:transfers.cancel')->name('cancel');
+    });
+
+    // suppliers, purchase orders and goods receipts
+    Route::group(['prefix' => 'suppliers', 'as' => 'suppliers.'], function () {
+        Route::get('/', [SupplierController::class, 'index'])->middleware('can:suppliers.view')->name('index');
+        Route::get('create', [SupplierController::class, 'create'])->middleware('can:suppliers.create')->name('create');
+        Route::post('store', [SupplierController::class, 'store'])->middleware('can:suppliers.create')->name('store');
+        Route::get('{supplier}/edit', [SupplierController::class, 'edit'])->middleware('can:suppliers.edit')->name('edit');
+        Route::put('{supplier}', [SupplierController::class, 'update'])->middleware('can:suppliers.edit')->name('update');
+        Route::delete('{supplier}', [SupplierController::class, 'destroy'])->middleware('can:suppliers.delete')->name('delete');
+    });
+
+    Route::group(['prefix' => 'purchases', 'as' => 'purchases.'], function () {
+        Route::get('/', [PurchaseOrderController::class, 'index'])->middleware('can:purchases.view')->name('index');
+        Route::get('create', [PurchaseOrderController::class, 'create'])->middleware('can:purchases.create')->name('create');
+        Route::post('store', [PurchaseOrderController::class, 'store'])->middleware('can:purchases.create')->name('store');
+        Route::get('{purchaseOrder}', [PurchaseOrderController::class, 'show'])->middleware('can:purchases.view')->name('show');
+        Route::get('{purchaseOrder}/edit', [PurchaseOrderController::class, 'edit'])->middleware('can:purchases.edit')->name('edit');
+        Route::put('{purchaseOrder}', [PurchaseOrderController::class, 'update'])->middleware('can:purchases.edit')->name('update');
+        Route::post('{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('can:purchases.approve')->name('approve');
+        Route::post('{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('can:purchases.cancel')->name('cancel');
+        Route::get('{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->middleware('can:purchases.view')->name('print');
+    });
+
+    Route::group(['prefix' => 'receiving', 'as' => 'receiving.'], function () {
+        Route::get('/', [GoodsReceiptController::class, 'index'])->middleware('can:receiving.view')->name('index');
+        Route::get('create', [GoodsReceiptController::class, 'create'])->middleware('can:receiving.create')->name('create');
+        Route::post('store', [GoodsReceiptController::class, 'store'])->middleware('can:receiving.create')->name('store');
+        Route::get('{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('can:receiving.view')->name('show');
+        Route::post('{goodsReceipt}/post', [GoodsReceiptController::class, 'post'])->middleware('can:receiving.create')->name('post');
+        Route::post('{goodsReceipt}/supplier-return', [GoodsReceiptController::class, 'supplierReturn'])->middleware('can:receiving.create')->name('supplier-return');
+        Route::get('{goodsReceipt}/print', [GoodsReceiptController::class, 'print'])->middleware('can:receiving.view')->name('print');
     });
 
     // category

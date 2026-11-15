@@ -187,6 +187,28 @@
             </ul>
         @endcanany
 
+        {{-- ===== procurement ===== --}}
+        @canany(['suppliers.view', 'purchases.view', 'receiving.view'])
+            <span class="ns-group">Procurement</span>
+            <ul class="ns-nav">
+                @can('suppliers.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.suppliers.*') ? 'active' : '' }}" href="{{ route('admin.suppliers.index') }}">
+                        <span class="ns-ico"><i class="fas fa-handshake"></i></span><span>Suppliers</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('purchases.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.purchases.*') ? 'active' : '' }}" href="{{ route('admin.purchases.index') }}">
+                        <span class="ns-ico"><i class="fas fa-file-invoice"></i></span><span>Purchase orders</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('receiving.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.receiving.*') ? 'active' : '' }}" href="{{ route('admin.receiving.index') }}">
+                        <span class="ns-ico"><i class="fas fa-truck-ramp-box"></i></span><span>Receiving</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+            </ul>
+        @endcanany
+
         {{-- ===== modules ===== --}}
         @canany(['warehouses.view', 'branches.view'])
             <span class="ns-group">Modules</span>
