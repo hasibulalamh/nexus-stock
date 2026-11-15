@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\StockMovementType;
 use App\Events\LowStockAlertOpened;
+use App\Events\StockArrivedAtLocation;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Branch;
 use App\Models\Product;
@@ -61,7 +62,7 @@ class StockService
             $level->save();
             $this->syncAlertForLevel($level);
 
-            return StockMovement::create([
+            $movement = StockMovement::create([
                 'product_id' => $product->id,
                 'location_type' => $locationType,
                 'location_id' => $locationId,
@@ -75,6 +76,10 @@ class StockService
                 'performed_by' => $user->id,
                 'occurred_at' => $occurredAt ?? now(),
             ]);
+
+            $this->announceArrival($type, $delta, $product->id, $locationType, $locationId, $user->id);
+
+            return $movement;
         });
     }
 
@@ -251,8 +256,26 @@ class StockService
                     'occurred_at' => $occurredAt ?? now(),
                 ]);
                 $movement->units()->attach($units->pluck('id'));
+                $this->announceArrival($type, $delta, $product->id, $locationType, $locationId, $user->id);
+
                 return $movement;
             }
+
+    /**
+     * Announce inbound stock so warehouse backorders can be fulfilled.
+     */
+    private function announceArrival(StockMovementType $type, int $delta, int $productId, string $locationType, int $locationId, ?int $actorId): void
+    {
+        if ($delta <= 0) {
+            return;
+        }
+
+        if (! in_array($type, [StockMovementType::PURCHASE, StockMovementType::TRANSFER_IN, StockMovementType::OPENING, StockMovementType::RETURN_IN, StockMovementType::ADJUSTMENT], true)) {
+            return;
+        }
+
+        event(new StockArrivedAtLocation($productId, $locationType, $locationId, $actorId));
+    }
 
     /**
      * Transfer stock atomically. The sender must write the source; the
@@ -398,6 +421,64 @@ class StockService
     public function formatQuantityValue(int $thousandths): string
     {
         return $this->formatQuantity($thousandths);
+    }
+
+    /**
+     * Write off in-transit serial units without changing any level: the units
+     * never entered destination stock, so the movement has a zero delta and
+     * exists as an audit row only. stock:rebuild stays clean.
+     *
+     * @return array{movement: StockMovement, units: \Illuminate\Support\Collection<int, StockUnit>}
+     */
+    public function writeOffInTransitUnits(
+        User $user,
+        Product $product,
+        string $locationType,
+        int $locationId,
+        array $unitIds,
+        string $reason,
+        ?array $reference = null,
+    ): array {
+        $product = $this->validatedProduct($product);
+        $this->validateLocation($locationType, $locationId);
+        if ($product->tracking_type !== 'serial') {
+            throw new InvalidArgumentException('Serial write-off requires a serial-tracked product.');
+        }
+        if (! StockAccess::canWrite($user, $locationType, $locationId)) {
+            throw new RuntimeException('You cannot write stock at this location.');
+        }
+        $unitIds = array_values(array_unique(array_map('intval', $unitIds)));
+        if ($unitIds === []) {
+            throw new InvalidArgumentException('Serial write-off requires at least one unit.');
+        }
+
+        return DB::transaction(function () use ($user, $product, $locationType, $locationId, $unitIds, $reason, $reference): array {
+            $level = $this->lockedLevel($product->id, $locationType, $locationId);
+            $units = StockUnit::query()->where('product_id', $product->id)->whereIn('id', $unitIds)
+                ->orderBy('id')->lockForUpdate()->get();
+            if ($units->count() !== count($unitIds) || $units->contains(fn (StockUnit $unit) => $unit->status !== 'in_transit')) {
+                throw new InvalidArgumentException('Every unit must be in transit.');
+            }
+            $units->each(fn (StockUnit $unit) => $unit->update([
+                'status' => 'written_off', 'location_type' => null, 'location_id' => null,
+            ]));
+            $movement = StockMovement::create([
+                'product_id' => $product->id,
+                'location_type' => $locationType,
+                'location_id' => $locationId,
+                'movement_type' => StockMovementType::ADJUSTMENT->value,
+                'quantity_delta' => '0.000',
+                'balance_after' => $level->quantity,
+                'reference_type' => $reference['type'] ?? null,
+                'reference_id' => $reference['id'] ?? null,
+                'notes' => $reason,
+                'performed_by' => $user->id,
+                'occurred_at' => now(),
+            ]);
+            $movement->units()->attach($units->pluck('id'));
+
+            return ['movement' => $movement, 'units' => $units];
+        });
     }
 
     /**

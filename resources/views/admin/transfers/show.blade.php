@@ -34,7 +34,8 @@
 
         <div class="d-flex flex-wrap gap-2 mt-3">
           @if($transfer->status === 'draft' && auth()->user()->can('transfers.send'))
-            <form method="POST" action="{{ route('admin.transfers.send', $transfer) }}">@csrf<button class="btn btn-primary">Send</button></form>
+            <form method="POST" action="{{ route('admin.transfers.send', $transfer) }}">@csrf<button class="btn btn-primary">Send all</button></form>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#sendModal">Send with quantities</button>
           @endif
           @if($transfer->status === 'sent' && auth()->user()->can('transfers.receive'))
             <form method="POST" action="{{ route('admin.transfers.receive', $transfer) }}">@csrf<button class="btn btn-success">Receive all</button></form>
@@ -69,6 +70,45 @@
                   @endif
                 </td>
               </tr>
+              @if($item->discrepancies->isNotEmpty())
+                <tr><td colspan="6" class="bg-light">
+                  <strong class="d-block mb-2">Discrepancies</strong>
+                  <table class="table table-sm mb-0">
+                    <thead><tr><th>Type</th><th>Qty</th><th>Status</th><th>Reason / note</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach($item->discrepancies as $discrepancy)
+                      <tr>
+                        <td>{{ ucfirst($discrepancy->type) }}</td>
+                        <td>{{ $discrepancy->qty }}</td>
+                        <td>
+                          @if($discrepancy->status === 'open')
+                            <span class="badge bg-danger">Open</span>
+                          @else
+                            <span class="badge bg-success">Resolved: {{ ucfirst(str_replace('_', ' ', $discrepancy->resolution)) }}</span>
+                          @endif
+                        </td>
+                        <td>{{ $discrepancy->resolution_note ?: ($discrepancy->reason ?: '—') }}</td>
+                        <td>
+                          @if($discrepancy->status === 'open' && auth()->user()->can('stock.discrepancies.resolve'))
+                            <form method="POST" action="{{ route('admin.transfers.discrepancies.resolve', $discrepancy) }}" class="d-flex flex-wrap gap-1">
+                              @csrf
+                              <select name="resolution" class="form-select form-select-sm" style="width:auto">
+                                <option value="found">Found</option>
+                                <option value="returned">Returned</option>
+                                <option value="written_off">Written off</option>
+                                <option value="lost">Lost</option>
+                              </select>
+                              <input name="note" class="form-control form-control-sm" style="width:140px" placeholder="Note">
+                              <button class="btn btn-sm btn-primary">Resolve</button>
+                            </form>
+                          @endif
+                        </td>
+                      </tr>
+                    @endforeach
+                    </tbody>
+                  </table>
+                </td></tr>
+              @endif
             @empty
               <tr><td colspan="6">No lines.</td></tr>
             @endforelse
@@ -118,6 +158,41 @@
   </div>
 </div>
 
+@if($transfer->status === 'draft' && auth()->user()->can('transfers.send'))
+  <div class="modal fade" id="sendModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form method="POST" action="{{ route('admin.transfers.send', $transfer) }}">
+          @csrf
+          <div class="modal-header"><h5 class="modal-title">Send with quantities</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+          <div class="modal-body">
+            <p class="text-muted small">Send less than requested to leave a backorder. Unticked serial units stay at the source.</p>
+            @foreach($transfer->items as $item)
+              <div class="border rounded p-2 mb-2">
+                <div class="fw-semibold mb-1">{{ $item->product?->name }} <span class="text-muted small">(requested {{ $item->requested_qty }})</span></div>
+                @if($item->product?->tracking_type === 'serial')
+                  @foreach($item->stockUnits->where('status', 'in_stock') as $unit)
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="items[{{ $item->id }}][unit_ids][]" value="{{ $unit->id }}" id="send-unit-{{ $item->id }}-{{ $unit->id }}" checked>
+                      <label class="form-check-label" for="send-unit-{{ $item->id }}-{{ $unit->id }}">{{ $unit->serial_no ?: $unit->unit_code }}</label>
+                    </div>
+                  @endforeach
+                @else
+                  <input type="number" step="0.001" min="0" max="{{ $item->requested_qty }}" class="form-control" name="items[{{ $item->id }}][sent_qty]" value="{{ $item->requested_qty }}">
+                @endif
+              </div>
+            @endforeach
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            <button class="btn btn-primary">Send</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+@endif
+
 @if($transfer->status === 'sent' && auth()->user()->can('transfers.receive'))
   <div class="modal fade" id="receiveModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -126,21 +201,40 @@
           @csrf
           <div class="modal-header"><h5 class="modal-title">Receive with exceptions</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
           <div class="modal-body">
-            <p class="text-muted small">Enter the quantity that actually arrived. Shortages create discrepancies and stay out of branch stock until resolved.</p>
+            <p class="text-muted small">Enter the good quantity that arrived and the damaged quantity. Shortages and damage create discrepancies; only good stock enters the destination.</p>
             @foreach($transfer->items as $item)
               <div class="border rounded p-2 mb-2">
                 <div class="fw-semibold mb-1">{{ $item->product?->name }} <span class="text-muted small">(sent {{ $item->sent_qty }})</span></div>
                 @if($item->product?->tracking_type === 'serial')
-                  @foreach($item->stockUnits as $unit)
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="items[{{ $item->id }}][unit_ids][]" value="{{ $unit->id }}" id="receive-unit-{{ $item->id }}-{{ $unit->id }}" checked>
-                      <label class="form-check-label" for="receive-unit-{{ $item->id }}-{{ $unit->id }}">{{ $unit->serial_no ?: $unit->unit_code }}</label>
+                  @foreach($item->stockUnits->where('status', 'in_transit') as $unit)
+                    <div class="row g-1 align-items-center mb-1">
+                      <div class="col-7">{{ $unit->serial_no ?: $unit->unit_code }}</div>
+                      <div class="col-5 d-flex gap-3">
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="items[{{ $item->id }}][unit_ids][]" value="{{ $unit->id }}" id="receive-unit-{{ $item->id }}-{{ $unit->id }}" checked>
+                          <label class="form-check-label small" for="receive-unit-{{ $item->id }}-{{ $unit->id }}">Arrived</label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="items[{{ $item->id }}][damaged_unit_ids][]" value="{{ $unit->id }}" id="damaged-unit-{{ $item->id }}-{{ $unit->id }}">
+                          <label class="form-check-label small" for="damaged-unit-{{ $item->id }}-{{ $unit->id }}">Damaged</label>
+                        </div>
+                      </div>
                     </div>
                   @endforeach
-                  <div class="form-text">Uncheck the units that did not arrive.</div>
+                  <div class="form-text">Untick arrived units and mark damaged ones; unticked units are shortages.</div>
                 @else
-                  <input type="number" step="0.001" min="0" max="{{ $item->sent_qty }}" class="form-control" name="items[{{ $item->id }}][received_qty]" value="{{ $item->sent_qty }}">
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <label class="form-label small mb-0">Received</label>
+                      <input type="number" step="0.001" min="0" max="{{ $item->sent_qty }}" class="form-control" name="items[{{ $item->id }}][received_qty]" value="{{ $item->sent_qty }}">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small mb-0">Damaged (of sent)</label>
+                      <input type="number" step="0.001" min="0" max="{{ $item->sent_qty }}" class="form-control" name="items[{{ $item->id }}][damaged_qty]" value="0">
+                    </div>
+                  </div>
                 @endif
+                <input name="items[{{ $item->id }}][reason]" class="form-control form-control-sm mt-2" placeholder="Reason (optional)">
               </div>
             @endforeach
           </div>

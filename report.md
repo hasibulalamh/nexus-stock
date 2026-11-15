@@ -384,3 +384,57 @@ Known limitations / unverified:
 - Serial quantity on a line is derived from the selected units.
 - MySQL row-lock behaviour, browser rendering and printing were not verified
   here.
+
+## Phase B - Receiving exceptions, returns, backorders
+
+Status: **done**. Phase A commit: `e9f5e48`.
+
+Migration added: `2026_11_17_000003_create_transfer_discrepancies_table.php`
+(`transfer_discrepancies`: item, type short|damaged|extra, qty, reason,
+`stock_unit_ids` json for serial lines, status open|resolved, resolution
+lost|found|written_off|returned, note, resolver, resolved_at).
+
+Routes added:
+
+- `POST /admin/transfers/discrepancies/{transferDiscrepancy}/resolve`
+  (`admin.transfers.discrepancies.resolve`, `stock.discrepancies.resolve`)
+- `POST /admin/transfers/{transfer}/send` now accepts per-line quantities
+  (partial send) and serial unit selections.
+
+Behaviour:
+
+- `receiveWithQuantities()` accepts `received_qty` and `damaged_qty` per line
+  (serial: arrived unit ids and damaged unit ids). Only good quantity enters
+  the destination; shortage = sent - received - damaged creates a `short`
+  discrepancy, damaged quantity creates a `damaged` discrepancy. Unticked
+  serial units stay `in_transit` and are recorded on the discrepancy.
+- `resolveDiscrepancy()` is locked, permission- and scope-checked and audited:
+  `found` moves the quantity/units into the destination via an `adjustment`
+  movement, `returned` moves it back to the source, `written_off` records a
+  zero-delta adjustment for quantity products and marks serial units
+  `written_off`, `lost` records no stock movement.
+- Partial send (`send($user, $transfer, $lines)`) leaves `sent_qty <
+  requested_qty`, which surfaces as a backorder badge on the detail page and
+  on `admin.transfers.backorders`.
+- `StockService` now emits `StockArrivedAtLocation` for positive
+  purchase/transfer_in/opening/return_in/adjustment movements; the listener
+  notifies warehouse users holding `transfers.create` that a backorder can be
+  filled (never auto-sends).
+- Discrepancy opened -> notification to source-location users with
+  `transfers.create` (warehouse managers). Return sent -> destination
+  (warehouse) users with `transfers.receive` via the existing send
+  notification.
+- Transfer detail shows the discrepancy table with an inline resolve form and
+  a partial-send modal.
+
+Tests added: `tests/Feature/TransferExceptionsTest.php` (8 tests) for partial
+receive, damaged handling and write-off ledger effects, return flow, return
+reason validation, partial send backorder + warehouse notification, serial
+partial receive and found resolution, discrepancy permission/scope, page
+render and rebuild cleanliness.
+
+Last full run: **217 tests, 889 assertions** (`php artisan test`, SQLite).
+
+Known limitations / unverified: MySQL concurrency, browser rendering of the
+new modals, and printing are unverified. "Lost" discrepancies deliberately
+record no stock movement (documented above).

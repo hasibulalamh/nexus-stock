@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Product;
 use App\Models\StockUnit;
 use App\Models\Transfer;
+use App\Models\TransferDiscrepancy;
 use App\Models\TransferItem;
 use App\Models\Warehouse;
 use App\Services\TransferService;
@@ -111,7 +112,7 @@ class TransferController
 
         return view('admin.transfers.show', [
             'transfer' => $transfer->load([
-                'items.product', 'items.stockUnits',
+                'items.product', 'items.stockUnits', 'items.discrepancies.resolver',
                 'requester', 'sender', 'receiver', 'stockAlert',
             ]),
         ]);
@@ -120,8 +121,18 @@ class TransferController
     public function send(Request $request, Transfer $transfer)
     {
         abort_unless($this->service->visibleTo($request->user())->whereKey($transfer->id)->exists(), 403);
+        $validated = $request->validate([
+            'items' => ['nullable', 'array'],
+            'items.*.sent_qty' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
+            'items.*.unit_ids' => ['nullable', 'array'],
+            'items.*.unit_ids.*' => ['integer'],
+        ]);
+        $sent = [];
+        foreach ($validated['items'] ?? [] as $itemId => $input) {
+            $sent[(int) $itemId] = $input;
+        }
         try {
-            $this->service->send($request->user(), $transfer);
+            $this->service->send($request->user(), $transfer, $sent);
         } catch (RuntimeException|\InvalidArgumentException $exception) {
             return back()->withErrors(['transfer' => $exception->getMessage()]);
         }
@@ -135,8 +146,12 @@ class TransferController
         $validated = $request->validate([
             'items' => ['nullable', 'array'],
             'items.*.received_qty' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
+            'items.*.damaged_qty' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
+            'items.*.reason' => ['nullable', 'string', 'max:1000'],
             'items.*.unit_ids' => ['nullable', 'array'],
             'items.*.unit_ids.*' => ['integer'],
+            'items.*.damaged_unit_ids' => ['nullable', 'array'],
+            'items.*.damaged_unit_ids.*' => ['integer'],
         ]);
         $received = [];
         foreach ($validated['items'] ?? [] as $itemId => $input) {
@@ -161,6 +176,25 @@ class TransferController
         }
 
         return redirect()->route('admin.transfers.show', $transfer)->with('success', 'Transfer cancelled.');
+    }
+
+    public function resolveDiscrepancy(Request $request, TransferDiscrepancy $transferDiscrepancy)
+    {
+        $transferId = (int) $transferDiscrepancy->item()->value('transfer_id');
+        abort_unless($this->service->visibleTo($request->user())->whereKey($transferId)->exists(), 403);
+        $validated = $request->validate([
+            'resolution' => ['required', Rule::in(TransferDiscrepancy::RESOLUTIONS)],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+        try {
+            $this->service->resolveDiscrepancy(
+                $request->user(), $transferDiscrepancy, $validated['resolution'], $validated['note'] ?? null,
+            );
+        } catch (RuntimeException|\InvalidArgumentException $exception) {
+            return back()->withErrors(['discrepancy' => $exception->getMessage()]);
+        }
+
+        return back()->with('success', 'Discrepancy resolved.');
     }
 
     public function deliveryNote(Request $request, Transfer $transfer)

@@ -140,6 +140,8 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('create', [TransferController::class, 'create'])->middleware('can:transfers.create')->name('create');
         Route::post('store', [TransferController::class, 'store'])->middleware('can:transfers.create')->name('store');
         Route::get('backorders', [TransferController::class, 'backorders'])->middleware('can:transfers.view')->name('backorders');
+        Route::post('discrepancies/{transferDiscrepancy}/resolve', [TransferController::class, 'resolveDiscrepancy'])
+            ->middleware('can:stock.discrepancies.resolve')->name('discrepancies.resolve');
         Route::get('{transfer}', [TransferController::class, 'show'])->middleware('can:transfers.view')->name('show');
         Route::get('{transfer}/delivery-note', [TransferController::class, 'deliveryNote'])->middleware('can:transfers.view')->name('delivery-note');
         Route::post('{transfer}/send', [TransferController::class, 'send'])->middleware('can:transfers.send')->name('send');
