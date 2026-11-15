@@ -276,6 +276,8 @@ concurrency behavior were not verified in this environment.
 
 ## Phase 9 follow-up: opening form Blade regression
 
+Commit: `c53253b fix(stock): compile opening request form safely`.
+
 Fixed the opening form's nested `@json` expression by preparing product
 options in `StockLevelController`. The form now safely preserves old line
 input, dynamically restores serial/quantity fields, and displays escaped
