@@ -198,8 +198,11 @@ class OpeningStockRequestService
             throw new InvalidArgumentException('Opening stock already exists for this product and location.');
         }
         $quantity = app(StockService::class)->parseForRequest($line['quantity'] ?? 0);
-        if ($quantity <= 0 || ($product->tracking_type === 'serial' && $quantity % 1000 !== 0)) {
-            throw new InvalidArgumentException($product->tracking_type === 'serial' ? 'Serial quantities must be whole units.' : 'Quantity must be greater than zero with at most three decimals.');
+        if ($product->tracking_type === 'quantity' && $quantity <= 0) {
+            throw new InvalidArgumentException('Quantity must be greater than zero with at most three decimals.');
+        }
+        if ($product->tracking_type === 'serial' && ($quantity < 0 || $quantity % 1000 !== 0)) {
+            throw new InvalidArgumentException('Serial quantities must be whole units.');
         }
         $serials = $line['serial_numbers'] ?? [];
         if ($product->tracking_type === 'serial') {
@@ -209,7 +212,7 @@ class OpeningStockRequestService
             if ($serials === [] && (! $line['use_system_codes'] || $quantity < 1000)) {
                 throw new InvalidArgumentException('Provide serial numbers or explicitly enable system codes with a quantity.');
             }
-            if ($serials !== [] && count($serials) !== intdiv($quantity, 1000)) {
+            if ($serials !== [] && $quantity > 0 && count($serials) !== intdiv($quantity, 1000)) {
                 throw new InvalidArgumentException('Serial count must equal the quantity.');
             }
             if (StockUnit::query()->where('product_id', $product->id)->whereIn('serial_no', $serials)->exists()) {

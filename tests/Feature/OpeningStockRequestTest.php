@@ -115,7 +115,7 @@ class OpeningStockRequestTest extends TestCase
         $service = app(OpeningStockRequestService::class);
         $request = $service->submit($this->admin, [
             'location_type' => 'branch', 'location_id' => $branch->id, 'occurred_at' => '2026-11-16',
-            'lines' => [['product_id' => $product->id, 'quantity' => '2', 'serial_numbers' => ['SN-1', 'SN-2']]],
+            'lines' => [['product_id' => $product->id, 'quantity' => '0', 'serial_numbers' => ['SN-1', 'SN-2']]],
         ]);
         $service->reject($this->admin, $request, 'Please verify the count.');
         $newRequest = $service->resubmit($this->admin, $request->fresh('lines'));
