@@ -74,12 +74,34 @@ class ProductController extends Controller
     /**
      * Show the edit form.
      */
-    public function edit(Product $product)
+    public function edit(Request $request, Product $product)
     {
         $categories = Category::active()->orderBy('name')->get(['id', 'name']);
         $brands = Brand::where('status', 'active')->orderBy('name')->get(['id', 'name']);
         $units = config('inventory.units');
-        return view('admin.product.edit', compact('product', 'categories', 'brands', 'units'));
+
+        $stockLevels = collect();
+        if ($request->user()->can('stock.view')) {
+            $levels = StockLevel::query()->where('product_id', $product->id)
+                ->orderBy('location_type')->orderBy('location_id')->get();
+            $branchNames = \App\Models\Branch::query()
+                ->whereIn('id', $levels->where('location_type', 'branch')->pluck('location_id'))
+                ->pluck('name', 'id');
+            $warehouseNames = \App\Models\Warehouse::query()
+                ->whereIn('id', $levels->where('location_type', 'warehouse')->pluck('location_id'))
+                ->pluck('name', 'id');
+            $stockLevels = $levels->map(fn (StockLevel $level) => [
+                'name' => $level->location_type === 'branch'
+                    ? ($branchNames[$level->location_id] ?? 'Branch #'.$level->location_id)
+                    : ($warehouseNames[$level->location_id] ?? 'Warehouse #'.$level->location_id),
+                'type' => $level->location_type,
+                'quantity' => (string) $level->quantity,
+                'minimum' => $level->min_quantity,
+                'updated_at' => $level->updated_at?->setTimezone('Asia/Dhaka')->format('Y-m-d H:i') ?? '—',
+            ]);
+        }
+
+        return view('admin.product.edit', compact('product', 'categories', 'brands', 'units', 'stockLevels'));
     }
 
     /**
@@ -236,10 +258,17 @@ class ProductController extends Controller
     private function barcodeLabels($products, int $quantity)
     {
         $generator = new BarcodeGeneratorSVG();
-        return $products->flatMap(fn (Product $product) => collect(range(1, $quantity))->map(fn () => [
-            'product' => $product,
-            'svg' => $generator->getBarcode($product->barcode, BarcodeGenerator::TYPE_EAN_13),
-        ]));
+
+        return $products->flatMap(function (Product $product) use ($generator, $quantity) {
+            if (! $product->barcode) {
+                $product->forceFill(['barcode' => Product::internalBarcodeForId($product->id)])->save();
+            }
+
+            return collect(range(1, $quantity))->map(fn () => [
+                'product' => $product,
+                'svg' => $generator->getBarcode($product->barcode, BarcodeGenerator::TYPE_EAN_13),
+            ]);
+        });
     }
 
     private function barcodeSizes(): array

@@ -6,7 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class OpeningStockRequestLine extends Model
 {
-    protected $fillable = ['request_id', 'product_id', 'quantity', 'serial_numbers', 'use_system_codes'];
+    protected $fillable = [
+        'request_id', 'product_id', 'quantity', 'serial_numbers', 'use_system_codes',
+        'pending_location_type', 'pending_location_id', 'pending_marker',
+    ];
 
     protected $casts = [
         'quantity' => 'decimal:3',

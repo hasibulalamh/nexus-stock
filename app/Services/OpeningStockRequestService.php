@@ -9,9 +9,11 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockUnit;
 use App\Models\User;
+use App\Support\DocumentNumber;
 use App\Support\StockAccess;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -38,10 +40,26 @@ class OpeningStockRequestService
                 'requested_by' => $user->id,
                 'requested_at' => now(),
             ]);
-            $request->update(['request_no' => sprintf('OSR-%s-%06d', Carbon::parse($data['occurred_at'])->format('Y'), $request->id)]);
-            foreach ($lines as $line) {
-                $this->validateLine($line, $type, $locationId, true);
-                $request->lines()->create($line);
+            $request->update(['request_no' => DocumentNumber::next('OSR', Carbon::parse($data['occurred_at']))]);
+
+            try {
+                foreach ($lines as $line) {
+                    $this->validateLine($line, $type, $locationId, true);
+                    $request->lines()->create([
+                        ...$line,
+                        'pending_location_type' => $type,
+                        'pending_location_id' => $locationId,
+                        'pending_marker' => 'pending',
+                    ]);
+                }
+            } catch (QueryException $exception) {
+                // The unique index on the pending marker is the database-level
+                // guard behind the application check above.
+                throw new InvalidArgumentException(
+                    'A pending opening stock request already exists for this product and location.',
+                    0,
+                    $exception
+                );
             }
 
             return $request->load('lines');
@@ -85,6 +103,7 @@ class OpeningStockRequestService
                     );
                 }
             }
+            $locked->lines()->update(['pending_marker' => null]);
             $locked->update(['status' => 'approved', 'reviewed_by' => $user->id, 'reviewed_at' => now()]);
 
             return $locked->fresh(['lines', 'requester', 'reviewer', 'location']);
@@ -108,6 +127,7 @@ class OpeningStockRequestService
             if ($locked->status !== 'pending') {
                 throw new RuntimeException('Only pending opening stock requests can be rejected.');
             }
+            $locked->lines()->update(['pending_marker' => null]);
             $locked->update(['status' => 'rejected', 'rejection_reason' => $reason, 'reviewed_by' => $user->id, 'reviewed_at' => now()]);
             return $locked->fresh(['lines', 'requester', 'reviewer', 'location']);
         });
@@ -126,6 +146,7 @@ class OpeningStockRequestService
             if ($locked->status !== 'pending') {
                 throw new RuntimeException('Only pending opening stock requests can be cancelled.');
             }
+            $locked->lines()->update(['pending_marker' => null]);
             $locked->update(['status' => 'cancelled']);
             return $locked;
         });

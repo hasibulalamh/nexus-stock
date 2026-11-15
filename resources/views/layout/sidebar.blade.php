@@ -44,6 +44,8 @@
                             <span>Roles</span><i class="ns-dot"></i>
                         </a>
                     </li>
+                @endcan
+                @can('activitylog.view')
                     <li>
                         <a class="ns-link {{ request()->routeIs('admin.activity-log') ? 'active' : '' }}"
                            href="{{ route('admin.activity-log') }}">

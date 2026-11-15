@@ -187,6 +187,33 @@
           </button>
         </div>
       </form>
+
+      @can('stock.view')
+        <div class="mt-4">
+          <div class="nx-section"><i class="fas fa-warehouse"></i> Stock by location</div>
+          <hr>
+          @if($stockLevels->isEmpty())
+            <p class="text-muted mb-0">No stock recorded for this product yet.</p>
+          @else
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>Location</th><th>Type</th><th>On hand</th><th>Minimum</th><th>Updated</th></tr></thead>
+                <tbody>
+                  @foreach($stockLevels as $level)
+                    <tr>
+                      <td>{{ $level['name'] }}</td>
+                      <td>{{ ucfirst($level['type']) }}</td>
+                      <td>{{ $level['quantity'] }}</td>
+                      <td>{{ $level['minimum'] ?? '—' }}</td>
+                      <td>{{ $level['updated_at'] }}</td>
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            </div>
+          @endif
+        </div>
+      @endcan
     </div>
   </div>
 </div>

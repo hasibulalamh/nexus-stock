@@ -44,8 +44,21 @@
               <td>{{ $activity->causer?->full_name ?? $activity->causer?->name ?? 'System' }}</td>
               <td><span class="badge bg-secondary">{{ ucfirst($activity->description) }}</span></td>
               <td>{{ class_basename($activity->subject_type ?? '') ?: 'Authentication' }}</td>
-              <td><pre class="nx-json">{{ json_encode($activity->properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre></td>
-              <td>{{ $activity->created_at->format('d M, Y | h:i A') }}</td>
+              <td>
+                @if($activity->properties->isEmpty())
+                  <span class="text-muted">-</span>
+                @else
+                  <ul class="mb-0 small ps-3">
+                    @foreach($activity->properties as $key => $value)
+                      <li>
+                        <strong>{{ ucfirst(str_replace('_', ' ', $key)) }}:</strong>
+                        {{ is_scalar($value) ? $value : json_encode($value, JSON_UNESCAPED_SLASHES) }}
+                      </li>
+                    @endforeach
+                  </ul>
+                @endif
+              </td>
+              <td>{{ $activity->created_at->copy()->setTimezone('Asia/Dhaka')->format('d M, Y | h:i A') }}</td>
             </tr>
           @empty
             <tr><td colspan="5" class="nx-empty"><div class="nx-empty-title">No activity found</div></td></tr>

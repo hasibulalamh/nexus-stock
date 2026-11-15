@@ -51,7 +51,7 @@
                 <pre class="nx-json">{{ json_encode($activity->properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
               </td>
 
-              <td class="d-none d-lg-table-cell">{{ $activity->created_at->format('d M, Y | h:i A') }}</td>
+              <td class="d-none d-lg-table-cell">{{ $activity->created_at->copy()->setTimezone('Asia/Dhaka')->format('d M, Y | h:i A') }}</td>
             </tr>
           @empty
             <tr>

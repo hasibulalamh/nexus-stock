@@ -586,3 +586,146 @@ Known limitations / unverified: reports read committed data only (no
 materialised snapshots); CSV has no BOM; very large exports stream row-by-row
 but are not queued; KPI turnover intentionally blank; MySQL query plans and
 browser printing unverified.
+
+## Phase F - Hardening and polish
+
+Status: **done**, with the caveats listed below.
+
+Migration added: `2026_11_17_000006_add_opening_request_pending_markers.php`
+— nullable `pending_location_type`, `pending_location_id`, `pending_marker`
+on `opening_stock_request_lines` plus unique index `osrl_pending_unique`
+(product + location + marker). Pending lines carry `'pending'`; approve,
+reject and cancel clear it to NULL, so multiple NULL history rows are fine on
+MySQL and SQLite.
+
+Changes:
+
+- Opening stock request numbers now come from `DocumentNumber::next('OSR',
+  occurred_at)` (locked per-prefix/year sequence) instead of the request id.
+  The application-level duplicate check remains, and a `QueryException` from
+  the new unique index is translated into the same user-facing message.
+  Audit confirmed `recordOpening` / `recordSerialOpening` are only called by
+  `OpeningStockRequestService::approve`, the opening form controller and
+  tests — no unapproved write path.
+- Notification recipients: submitted requests use
+  `StockRecipients::forLocation('stock.opening.approve', ...)` and approved
+  requests explicitly merge `access_all` users, so superadmin/access_all users
+  are not missed by `hasPermissionTo`-only queries.
+- Activity log now has and enforces `activitylog.view` (route middleware,
+  sidebar `@can`); dates render in Asia/Dhaka, empty properties show "-" and
+  properties render as a readable key/value list.
+- `RolePermissionDefaultsSeeder` (new, **not run**) documents starter
+  permission sets for `warehouse_manager`, `branch_manager`, `branch_staff`.
+- Product edit page: "Stock by location" panel (permission `stock.view`) with
+  on-hand, minimum and Dhaka timestamp per branch/warehouse.
+- Barcode page generates and saves an internal EAN-13 barcode on demand when a
+  product has none instead of throwing; `products:generate-barcodes` untouched.
+- Hardcoded date formats replaced with Asia/Dhaka in the audit-log page and
+  the opening request detail page. A sweep of admin Blade views found no
+  hardcoded currency symbols or money `number_format` calls (the remaining
+  `number_format` is a transfer backorder quantity).
+- `AreaImportService`: NFC-normalises `area`, `area_bn` and `thana_hint`
+  (when `intl`/`Normalizer` is available), rejects duplicated rows inside the
+  CSV after normalisation, matches existing areas using normalised values, and
+  never overwrites or duplicates a row that has an `osm_id` with a row that
+  does not.
+- New `AdminRoutesSmokeTest`: GETs every parameterless named `admin.*` GET
+  route as superadmin and asserts the status is below 500 (currently 60+
+  routes, all pass).
+
+Tests added: `tests/Feature/HardeningTest.php` (8 tests) and
+`tests/Feature/AdminRoutesSmokeTest.php` (1 test) — activity-log permission,
+stock-by-location panel, barcode fallback, pending-marker index/clear,
+access_all notification recipient, NFC/duplicate/OSM-safety area imports, and
+the parameterless route sweep.
+
+Last full run: **253 tests, 1220 assertions** (`php artisan test`, SQLite).
+
+Known limitations / unverified:
+
+- The DB guard only covers lines created after this migration; old pending
+  requests have NULL markers but are still covered by the service check.
+- "Stock by location" on the product page is not location-scoped (gated by
+  `stock.view`, intended for catalogue administrators).
+- NFC normalisation is a no-op when the PHP `intl` extension is absent.
+- `RolePermissionDefaultsSeeder` has not been executed; role sets are
+  suggestions only.
+- MySQL concurrency (simultaneous send/receive/approve, duplicate opening
+  requests under parallel requests), barcode printing and receipt printing
+  remain unverified outside SQLite feature tests.
+
+---
+
+# Supply-chain build - wrap-up
+
+## Phase status and commits
+
+| Phase | Status | Commit |
+| --- | --- | --- |
+| A - Transfers (warehouse -> branch) | done | `e9f5e48` |
+| B - Receiving exceptions, returns, backorders | done | `c1c5540` |
+| C - Suppliers, purchase orders, goods receipt | done | `643f688` |
+| D - Adjustments and stock counts | done | `2247a65` |
+| E - Reports, KPIs, dashboard | done | `3fc0155` |
+| F - Hardening and polish | done (caveats above) | this commit |
+
+Branch: `supply-chain-v1` (pushed to origin, not merged into `main`).
+
+## Owner checklist (exact commands)
+
+```bash
+php artisan config:clear
+php artisan migrate
+php artisan db:seed --class=PermissionSeeder
+php artisan permission:cache-reset
+# optional starter role sets (review before applying):
+php artisan db:seed --class=RolePermissionDefaultsSeeder
+```
+
+Then open Roles -> Permissions and grant the new permissions to existing
+roles: `transfers.*`, `suppliers.*`, `purchases.*`, `receiving.*`,
+`adjustments.*`, `counts.*`, `reports.view`, `stock.kpi.view`,
+`stock.discrepancies.resolve`, `activitylog.view`. Assign users to warehouses
+(branches inherit their supplying warehouse for reads) or use `access_all`.
+No queues or cron are required; notifications are database notifications.
+
+## Manual browser checklist
+
+Phase A: open Stock -> Alerts, click "Send stock"; create a transfer, send,
+check the branch stock and serial units, receive, print the delivery note.
+Phase B: receive a transfer with fewer units than sent; resolve a discrepancy
+as found/written off; send a return; create a backorder and check the
+warehouse notification when new stock arrives.
+Phase C: create a supplier, raise a PO, receive it partially from the PO,
+confirm only accepted quantity enters stock, print PO/GRN, try over-receipt.
+Phase D: submit an adjustment and approve it; run a stock count, submit with
+variance, approve; print the count sheet and scan a barcode.
+Phase E: open every report with filters and export CSV; open the KPI dashboard
+and confirm the turnover placeholder is labelled.
+Phase F: log in as a user without `activitylog.view` and confirm no sidebar
+link/403; open a product without a barcode and print labels; import an area
+CSV containing Bangla text and a duplicate row.
+
+## Risks / verify first
+
+1. MySQL-specific behaviour: row locking, duplicate index on pending markers,
+   and `DocumentNumber` sequencing under concurrency. SQLite tests cannot
+   prove these; run a two-session smoke test on staging before go-live.
+2. Existing pending opening requests (created before the marker migration)
+   are not covered by the new DB guard.
+3. Notifications depend on users being attached to the right warehouse/branch;
+   check `stock.alerts.receive`, `stock.opening.approve`, `transfers.receive`
+   holders for each location.
+4. Existing roles will have no access to new modules until the owner assigns
+   the new permissions in the UI.
+
+## Remaining work (not built)
+
+- Sales module (inventory turnover KPI placeholder remains until then) and
+  customer returns.
+- PO line editing after ordering, partial supplier returns for serial units,
+  GRN cancellation/reversal.
+- Queued/chunked CSV exports for very large datasets.
+- Activity-log retention/pruning policy and a module filter list generated
+  from actual models.
+- Automated browser/print tests and MySQL concurrency tests.

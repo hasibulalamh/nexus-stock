@@ -33,6 +33,7 @@ class AreaImportService
         }
 
         $preview = ['total' => 0, 'to_create' => 0, 'to_update' => 0, 'errors' => []];
+        $seen = [];
         $rowNumber = 1;
         while (($values = fgetcsv($handle, 0, ',')) !== false) {
             $rowNumber++;
@@ -54,7 +55,24 @@ class AreaImportService
                 continue;
             }
 
+            $key = $row['osm_id'] !== null
+                ? 'osm:'.$row['osm_id']
+                : 'name:'.$city->id.'|'.($row['name_bn'] ?? $row['name']);
+            if (isset($seen[$key])) {
+                $preview['errors'][] = ['row' => $rowNumber, 'message' => 'This area is duplicated inside the CSV file.'];
+
+                continue;
+            }
+            $seen[$key] = true;
+
             $existing = $this->findExisting($city->id, $row);
+            if (! $existing && $row['osm_id'] === null && $this->osmAreaExists($city->id, $row)) {
+                // A hand-written row may not overwrite (or duplicate) an area
+                // that came from OpenStreetMap with an osm_id.
+                $preview['to_update']++;
+
+                continue;
+            }
             $preview[$existing ? 'to_update' : 'to_create']++;
         }
         fclose($handle);
@@ -81,7 +99,11 @@ class AreaImportService
 
                 $row = $this->normalise(array_combine(self::HEADERS, array_pad($values, count(self::HEADERS), null)));
                 $city = City::where('name', $row['city'])->firstOrFail();
-                $area = $this->findExisting($city->id, $row) ?: new Area;
+                $existing = $this->findExisting($city->id, $row);
+                if (! $existing && $row['osm_id'] === null && $this->osmAreaExists($city->id, $row)) {
+                    continue;
+                }
+                $area = $existing ?: new Area;
                 $area->fill([
                     ...collect($row)->except('city')->all(),
                     'city_id' => $city->id,
@@ -111,6 +133,9 @@ class AreaImportService
     private function normalise(array $row): array
     {
         $row = array_map(fn ($value) => $this->nullable(trim((string) $value)), $row);
+        foreach (['area', 'area_bn', 'thana_hint'] as $key) {
+            $row[$key] = $this->normaliseText($row[$key]);
+        }
         $row['osm_id'] = $row['osm_id'] !== null && ctype_digit($row['osm_id']) ? (int) $row['osm_id'] : null;
         $row['lat'] = is_numeric($row['lat']) ? $row['lat'] : null;
         $row['lng'] = is_numeric($row['lng']) ? $row['lng'] : null;
@@ -144,9 +169,52 @@ class AreaImportService
 
     private function findExisting(int $cityId, array $row): ?Area
     {
-        return $row['osm_id'] !== null
-            ? Area::where('osm_id', $row['osm_id'])->first()
-            : Area::where('city_id', $cityId)->where('name_bn', $row['name_bn'])->first();
+        if ($row['osm_id'] !== null) {
+            return Area::where('osm_id', $row['osm_id'])->first();
+        }
+
+        // Rows without an osm_id may only update rows that also have no
+        // osm_id, so a hand-written CSV can never overwrite OSM-sourced data.
+        $candidates = Area::where('city_id', $cityId)->whereNull('osm_id')->get();
+
+        if ($row['name_bn'] !== null) {
+            return $candidates->first(fn (Area $area): bool => $this->normaliseText($area->name_bn) === $row['name_bn']);
+        }
+
+        return $candidates->first(fn (Area $area): bool => $area->name_bn === null && $area->name === $row['name']);
+    }
+
+    private function osmAreaExists(int $cityId, array $row): bool
+    {
+        return Area::where('city_id', $cityId)->whereNotNull('osm_id')->get()
+            ->contains(function (Area $area) use ($row): bool {
+                if ($row['name_bn'] !== null) {
+                    return $this->normaliseText($area->name_bn) === $row['name_bn'];
+                }
+
+                return $this->normaliseText($area->name) === $row['name'];
+            });
+    }
+
+    private function normaliseText(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (class_exists(\Normalizer::class)) {
+            $normalised = \Normalizer::normalize($value, \Normalizer::FORM_C);
+            if ($normalised !== false) {
+                return $normalised;
+            }
+        }
+
+        return $value;
     }
 
     private function nullable(string $value): ?string

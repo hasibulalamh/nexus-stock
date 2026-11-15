@@ -5,7 +5,7 @@ namespace App\Listeners;
 use App\Events\OpeningStockRequestChanged;
 use App\Models\User;
 use App\Notifications\OpeningStockRequestNotification;
-use App\Support\StockAccess;
+use App\Support\StockRecipients;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -16,9 +16,11 @@ class SendOpeningStockRequestNotification
         try {
             $request = $event->request->loadMissing(['lines', 'requester', 'reviewer', 'location']);
             $users = match ($event->action) {
-                'submitted' => User::query()->where('status', 'active')->get()
-                    ->filter(fn (User $user) => $user->can('stock.opening.approve')
-                        && StockAccess::canWrite($user, $request->location_type, (int) $request->location_id)),
+                'submitted' => StockRecipients::forLocation(
+                    'stock.opening.approve',
+                    $request->location_type,
+                    (int) $request->location_id
+                ),
                 'approved' => $this->approvalRecipients($request),
                 'rejected' => collect([$request->requester]),
                 default => collect(),
@@ -45,12 +47,13 @@ class SendOpeningStockRequestNotification
 
     private function approvalRecipients($request)
     {
-        $team = $request->location_type === 'branch'
-            ? $request->location?->users
-            : $request->location?->users;
+        $team = collect($request->location?->users ?: [])
+            ->filter(fn (User $user) => $user->hasAccessAll() || $user->can('stock.view'));
 
-        return collect([$request->requester])->merge(
-            collect($team ?: [])->filter(fn (User $user) => $user->can('stock.view'))
-        );
+        // access_all users do not receive Gate::before and may not be attached
+        // to the location, so add them explicitly.
+        $accessAll = User::query()->where('status', 'active')->where('access_all', true)->get();
+
+        return collect([$request->requester])->merge($team)->merge($accessAll);
     }
 }
