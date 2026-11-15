@@ -22,10 +22,13 @@
     <div class="col-md-4 serial-wrap d-none"><label class="form-label">Serial numbers</label><textarea class="form-control serial-input" rows="2" placeholder="One manufacturer serial per line"></textarea><div class="form-check"><input class="form-check-input system-codes" type="checkbox"><label class="form-check-label">System codes only</label></div></div>
     <div class="col-md-1"><button type="button" class="btn btn-outline-danger remove-line">Remove</button></div>
 </div></template>
+@php($fieldErrors = $errors->toArray())
 <script>
-const products = @json($products->map(fn ($product) => ['id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'tracking' => $product->tracking_type]));
+const products = @json($productOptions);
+const oldLines = @json($oldLines);
+const fieldErrors = @json($fieldErrors);
 const lines = document.getElementById('openingLines');
-function addLine() {
+function addLine(line = {}) {
     const index = lines.children.length, fragment = document.getElementById('lineTemplate').content.cloneNode(true), row = fragment.querySelector('.opening-line');
     const select = row.querySelector('.product-select');
     select.name = `lines[${index}][product_id]`;
@@ -33,9 +36,15 @@ function addLine() {
     const quantity = row.querySelector('.quantity-input'); quantity.name = `lines[${index}][quantity]`;
     const serials = row.querySelector('.serial-input'); serials.name = `lines[${index}][serial_numbers_text]`;
     const system = row.querySelector('.system-codes'); system.name = `lines[${index}][use_system_codes]`;
+    select.value = line.product_id ?? '';
+    quantity.value = line.quantity ?? '';
+    serials.value = line.serial_numbers_text ?? '';
+    system.checked = line.use_system_codes === '1' || line.use_system_codes === true;
+    function showErrors(field, element) { (fieldErrors[`lines.${index}.${field}`] || []).forEach(message => { const error = document.createElement('div'); error.className = 'text-danger small'; error.textContent = message; element.parentElement.appendChild(error); }); }
+    showErrors('product_id', select); showErrors('quantity', quantity); showErrors('serial_numbers_text', serials);
     function toggle() { const serial = select.selectedOptions[0]?.dataset.tracking === 'serial'; row.querySelector('.serial-wrap').classList.toggle('d-none', !serial); row.querySelector('.quantity-wrap').classList.toggle('d-none', serial); quantity.required = !serial; serials.required = serial; }
     select.addEventListener('change', toggle); row.querySelector('.remove-line').addEventListener('click', () => row.remove()); lines.appendChild(row); toggle();
 }
-document.getElementById('addLine').addEventListener('click', addLine); addLine();
+document.getElementById('addLine').addEventListener('click', () => addLine()); (oldLines.length ? oldLines : [{}]).forEach(addLine);
 </script>
 @endsection

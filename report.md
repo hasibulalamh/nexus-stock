@@ -273,3 +273,23 @@ opening-flow cases in `tests/Feature/StockUiTest.php`:
 Validation: `php artisan test` passed **196 tests and 762 assertions** on
 SQLite. No real-DB migrate/seed was run. Browser rendering and MySQL
 concurrency behavior were not verified in this environment.
+
+## Phase 9 follow-up: opening form Blade regression
+
+Fixed the opening form's nested `@json` expression by preparing product
+options in `StockLevelController`. The form now safely preserves old line
+input, dynamically restores serial/quantity fields, and displays escaped
+field errors beside the relevant controls. Added regression coverage for all
+stock page GETs, full Blade cache compilation with cleanup, and visible
+opening-form validation errors.
+
+Changed files:
+
+- `app/Http/Controllers/Admin/StockLevelController.php`
+- `resources/views/admin/stock/opening.blade.php`
+- `tests/Feature/StockUiTest.php`
+- `report.md`
+
+Validation: `php artisan view:cache` followed by `php artisan view:clear`
+passed, and `php artisan test` passed **199 tests and 775 assertions** on
+SQLite. Browser rendering and MySQL concurrency behavior remain unverified.

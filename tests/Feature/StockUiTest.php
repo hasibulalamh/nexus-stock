@@ -13,7 +13,9 @@ use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\StockService;
+use App\Services\OpeningStockRequestService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use Spatie\Permission\Models\Role;
@@ -146,5 +148,60 @@ class StockUiTest extends TestCase
 
         $this->actingAs($this->superadmin)->get(route('admin.stock.alerts', ['alert_id' => $alert->id]))
             ->assertOk()->assertSee($product->name);
+    }
+
+    public function test_permitted_user_can_render_every_stock_page(): void
+    {
+        $warehouse = $this->warehouse();
+        $product = $this->product();
+        $product->update(['barcode' => '200000000001']);
+        $request = app(OpeningStockRequestService::class)->submit($this->superadmin, [
+            'location_type' => 'warehouse',
+            'location_id' => $warehouse->id,
+            'lines' => [['product_id' => $product->id, 'quantity' => '1.000']],
+            'occurred_at' => '2026-11-03',
+        ]);
+
+        foreach ([
+            route('admin.stock.opening'),
+            route('admin.stock.requests.index'),
+            route('admin.stock.requests.show', $request),
+            route('admin.stock.levels'),
+            route('admin.stock.movements'),
+            route('admin.stock.alerts'),
+            route('admin.stock.units.labels'),
+            route('admin.stock.units.lookup'),
+            route('admin.products.barcode', $product),
+        ] as $url) {
+            $this->actingAs($this->superadmin)->get($url)->assertOk();
+        }
+    }
+
+    public function test_all_blade_views_compile_successfully(): void
+    {
+        try {
+            $this->assertSame(0, Artisan::call('view:cache'));
+        } finally {
+            Artisan::call('view:clear');
+        }
+    }
+
+    public function test_invalid_opening_submission_renders_visible_errors(): void
+    {
+        $warehouse = $this->warehouse();
+        $product = $this->product();
+
+        $this->actingAs($this->superadmin)
+            ->followingRedirects()
+            ->from(route('admin.stock.opening'))
+            ->post(route('admin.stock.opening.store'), [
+                'location_type' => 'warehouse',
+                'location_id' => $warehouse->id,
+                'lines' => [['product_id' => $product->id, 'quantity' => '0']],
+                'occurred_at' => '2026-11-03',
+            ])
+            ->assertOk()
+            ->assertSee('alert alert-danger', false)
+            ->assertSee('must be greater than 0');
     }
 }

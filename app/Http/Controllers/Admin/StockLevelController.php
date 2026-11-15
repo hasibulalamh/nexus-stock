@@ -70,11 +70,18 @@ class StockLevelController
     public function opening()
     {
         $user = auth()->user();
+        $products = Product::where('track_stock', true)->where('status', 'active')->get();
 
         return view('admin.stock.opening', [
-            'products' => Product::where('track_stock', true)->where('status', 'active')->get(),
+            'productOptions' => $products->map(fn (Product $product) => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'tracking' => $product->tracking_type,
+            ])->values()->all(),
             'branches' => Branch::when(($ids = $user->accessibleBranchIds()) !== null, fn ($q) => $q->whereIn('id', $ids))->get(),
             'warehouses' => Warehouse::when(($ids = $user->accessibleWarehouseIds()) !== null, fn ($q) => $q->whereIn('id', $ids))->get(),
+            'oldLines' => old('lines', []),
         ]);
     }
 
