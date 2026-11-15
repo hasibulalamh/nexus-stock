@@ -28,7 +28,7 @@ class PermissionSeeder extends Seeder
             'categories'   => ['view', 'create', 'edit', 'delete'],
             'brands'       => ['view', 'create', 'edit', 'delete'],
             'products'     => ['view', 'create', 'edit', 'delete'],
-            'stock'        => ['view', 'movements.view', 'opening', 'thresholds', 'alerts.view', 'alerts.receive', 'alerts.view_all'],
+            'stock'        => ['view', 'movements.view', 'opening', 'opening.approve', 'thresholds', 'alerts.view', 'alerts.receive', 'alerts.view_all'],
         ];
 
         foreach ($modules as $module => $actions) {

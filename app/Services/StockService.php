@@ -86,17 +86,18 @@ class StockService
         string|int|float $quantity,
         ?CarbonInterface $occurredAt = null,
         ?string $notes = null,
+        ?array $reference = null,
     ): StockMovement {
         $this->validateLocation($locationType, $locationId);
         $product = $this->validatedProduct($product);
         if ($product->tracking_type === 'serial') {
             throw new InvalidArgumentException('Serial products require serial numbers or explicit system-code opening.');
         }
-        return DB::transaction(function () use ($user, $product, $locationType, $locationId, $quantity, $occurredAt, $notes): StockMovement {
+        return DB::transaction(function () use ($user, $product, $locationType, $locationId, $quantity, $occurredAt, $notes, $reference): StockMovement {
             if (StockMovement::query()->where('product_id', $product->id)->where('location_type', $locationType)->where('location_id', $locationId)->exists()) {
                 throw new InvalidArgumentException('Opening stock already exists. Use an adjustment for corrections.');
             }
-            return $this->recordMovement($user, $product, $locationType, $locationId, StockMovementType::OPENING, $quantity, null, $notes, null, $occurredAt);
+            return $this->recordMovement($user, $product, $locationType, $locationId, StockMovementType::OPENING, $quantity, $reference, $notes, null, $occurredAt);
         });
     }
 
@@ -116,6 +117,7 @@ class StockService
                 bool $allowSystemCodes = false,
                 ?CarbonInterface $occurredAt = null,
                 ?string $notes = null,
+                ?array $reference = null,
             ): array {
                 $product = $this->validatedProduct($product);
                 if ($product->tracking_type !== 'serial') {
@@ -140,7 +142,7 @@ class StockService
                     throw new InvalidArgumentException('At least one unit is required.');
                 }
 
-                return DB::transaction(function () use ($user, $product, $locationType, $locationId, $serialNumbers, $count, $occurredAt, $notes): array {
+                return DB::transaction(function () use ($user, $product, $locationType, $locationId, $serialNumbers, $count, $occurredAt, $notes, $reference): array {
                     if (StockMovement::query()->where('product_id', $product->id)->where('location_type', $locationType)->where('location_id', $locationId)->exists()) {
                         throw new InvalidArgumentException('Opening stock already exists. Use an adjustment for corrections.');
                     }
@@ -167,7 +169,7 @@ class StockService
                     foreach ($units as $unit) {
                         $unit->update(['unit_code' => StockUnit::unitCodeForId($unit->id)]);
                     }
-                    $movement = $this->createSerialMovement($user, $product, $locationType, $locationId, StockMovementType::OPENING, $count * 1000, $units, null, $notes, null, $occurredAt, $level);
+                    $movement = $this->createSerialMovement($user, $product, $locationType, $locationId, StockMovementType::OPENING, $count * 1000, $units, $reference, $notes, null, $occurredAt, $level);
                     return ['movement' => $movement, 'units' => $units];
                 });
             }
@@ -554,11 +556,17 @@ class StockService
         if (! preg_match('/^[+-]?\d+(?:\.\d{1,3})?$/', $text)) {
             throw new InvalidArgumentException('Quantity must be numeric with at most 3 decimal places.');
         }
+
         $negative = str_starts_with($text, '-');
         $text = ltrim($text, '+-');
         [$whole, $fraction] = array_pad(explode('.', $text, 2), 2, '');
         $thousandths = ((int) $whole * 1000) + (int) str_pad($fraction, 3, '0');
         return $negative ? -$thousandths : $thousandths;
+    }
+
+    public function parseForRequest(string|int|float $value): int
+    {
+        return $this->parseQuantity($value);
     }
 
     private function toThousandths(string|int|float $value): int
