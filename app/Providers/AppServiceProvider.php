@@ -8,6 +8,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Event;
+use App\Events\OpeningStockRequestChanged;
+use App\Listeners\SendOpeningStockRequestNotification;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -41,5 +43,6 @@ class AppServiceProvider extends ServiceProvider
                 activity()->causedBy($event->user)->event('logout')->log('Logged out');
             }
         });
+        Event::listen(OpeningStockRequestChanged::class, SendOpeningStockRequestNotification::class);
     }
 }

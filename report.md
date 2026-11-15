@@ -223,3 +223,51 @@ the superadmin role; it does not auto-assign permissions to other roles.
 
 Suppliers, stock levels, stock movements, purchases, sales, transfers,
 adjustments, reports, and settings.
+
+## Phase 9: opening stock approval workflow
+
+Implemented in three logical commits:
+
+- `feat(stock): add opening request schema and approval service`
+- `feat(stock): add opening request UI and scoped routes`
+- `feat(stock): add opening request notifications and audit events`
+
+New migration: `2026_11_16_000001_create_opening_stock_requests_tables.php`.
+It creates `opening_stock_requests` and `opening_stock_request_lines`, including
+the requested status/location index and request-number uniqueness.
+
+Routes:
+
+- `GET|POST /admin/stock/opening` (`admin.stock.opening`,
+  `admin.stock.opening.store`)
+- `GET /admin/stock/requests` (`admin.stock.requests.index`)
+- `GET /admin/stock/requests/{openingStockRequest}`
+  (`admin.stock.requests.show`)
+- `POST /admin/stock/requests/{openingStockRequest}/approve`
+  (`admin.stock.requests.approve`)
+- `POST /admin/stock/requests/{openingStockRequest}/reject`
+  (`admin.stock.requests.reject`)
+- `POST /admin/stock/requests/{openingStockRequest}/cancel`
+  (`admin.stock.requests.cancel`)
+- `POST /admin/stock/requests/{openingStockRequest}/resubmit`
+  (`admin.stock.requests.resubmit`)
+
+The opening form now submits multiple escaped product lines for approval.
+Approval remains the only path that calls `StockService::recordOpening` or
+`recordSerialOpening`; ledger references point to the request and record the
+approver. The notification mail channel is disabled by default via
+`STOCK_MAIL_NOTIFICATIONS`, and self-approval is configurable via
+`STOCK_ALLOW_SELF_APPROVAL`.
+
+Changed files include the request models/service/event/listener/notification,
+stock controller/service/config/seeder, stock routes and views, sidebar and
+movement reference link, `.env.example`, and the focused feature tests
+`tests/Feature/OpeningStockRequestTest.php` and the deliberately updated
+opening-flow cases in `tests/Feature/StockUiTest.php`:
+
+- `test_opening_stock_submission_is_pending_and_second_pending_opening_is_rejected`
+- `test_opening_stock_rejects_invalid_quantity_and_unwritable_location`
+
+Validation: `php artisan test` passed **196 tests and 762 assertions** on
+SQLite. No real-DB migrate/seed was run. Browser rendering and MySQL
+concurrency behavior were not verified in this environment.
