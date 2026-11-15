@@ -482,6 +482,106 @@ class StockService
     }
 
     /**
+     * Write off / damage in-stock serial units through an adjustment movement.
+     */
+    public function removeSerialUnits(
+        User $user,
+        Product $product,
+        string $locationType,
+        int $locationId,
+        array $unitIds,
+        string $unitStatus = 'written_off',
+        ?array $reference = null,
+        ?string $notes = null,
+    ): StockMovement {
+        $product = $this->validatedProduct($product);
+        $this->validateLocation($locationType, $locationId);
+        if ($product->tracking_type !== 'serial') {
+            throw new InvalidArgumentException('Serial adjustment requires a serial-tracked product.');
+        }
+        if (! in_array($unitStatus, ['damaged', 'written_off', 'sold', 'returned'], true)) {
+            throw new InvalidArgumentException('Invalid serial unit status.');
+        }
+        if (! StockAccess::canWrite($user, $locationType, $locationId)) {
+            throw new RuntimeException('You cannot write stock at this location.');
+        }
+        $unitIds = array_values(array_unique(array_map('intval', $unitIds)));
+        if ($unitIds === []) {
+            throw new InvalidArgumentException('Select the serial units to adjust.');
+        }
+
+        return DB::transaction(function () use ($user, $product, $locationType, $locationId, $unitIds, $unitStatus, $reference, $notes): StockMovement {
+            $level = $this->lockedLevel($product->id, $locationType, $locationId);
+            $units = StockUnit::query()->where('product_id', $product->id)->whereIn('id', $unitIds)
+                ->orderBy('id')->lockForUpdate()->get();
+            if ($units->count() !== count($unitIds) || $units->contains(fn (StockUnit $unit) => $unit->status !== 'in_stock' || $unit->location_type !== $locationType || (int) $unit->location_id !== $locationId)) {
+                throw new InvalidArgumentException('Every unit must be in stock at the location.');
+            }
+            $movement = $this->createSerialMovement(
+                $user, $product, $locationType, $locationId, StockMovementType::ADJUSTMENT,
+                -count($unitIds) * 1000, $units, $reference, $notes, (string) str()->uuid(), null, $level,
+            );
+            $units->each(fn (StockUnit $unit) => $unit->update([
+                'status' => $unitStatus, 'location_type' => null, 'location_id' => null,
+            ]));
+
+            return $movement;
+        });
+    }
+
+    /**
+     * Found serial units: create new in-stock units under an adjustment.
+     *
+     * @return array{movement: StockMovement, units: \Illuminate\Support\Collection<int, StockUnit>}
+     */
+    public function recordSerialAdjustmentIn(
+        User $user,
+        Product $product,
+        string $locationType,
+        int $locationId,
+        array $serialNumbers,
+        ?array $reference = null,
+        ?string $notes = null,
+    ): array {
+        $product = $this->validatedProduct($product);
+        $this->validateLocation($locationType, $locationId);
+        if ($product->tracking_type !== 'serial') {
+            throw new InvalidArgumentException('Serial adjustment is only available for serial-tracked products.');
+        }
+        if (! StockAccess::canWrite($user, $locationType, $locationId)) {
+            throw new RuntimeException('You cannot write stock at this location.');
+        }
+        $serialNumbers = array_values(array_filter(array_map('trim', $serialNumbers), fn ($serial) => $serial !== ''));
+        if ($serialNumbers === [] || count($serialNumbers) !== count(array_unique($serialNumbers))) {
+            throw new InvalidArgumentException('Provide unique serial numbers for every found unit.');
+        }
+
+        return DB::transaction(function () use ($user, $product, $locationType, $locationId, $serialNumbers, $reference, $notes): array {
+            $level = $this->lockedLevel($product->id, $locationType, $locationId);
+            if (StockUnit::query()->where('product_id', $product->id)->whereIn('serial_no', $serialNumbers)->exists()) {
+                throw new InvalidArgumentException('A serial number already exists for this product.');
+            }
+            $units = collect();
+            foreach ($serialNumbers as $serial) {
+                $units->push(StockUnit::create([
+                    'product_id' => $product->id, 'serial_no' => $serial,
+                    'unit_code' => 'pending-'.str()->uuid(), 'status' => 'in_stock',
+                    'location_type' => $locationType, 'location_id' => $locationId, 'received_at' => now(),
+                ]));
+            }
+            foreach ($units as $unit) {
+                $unit->update(['unit_code' => StockUnit::unitCodeForId($unit->id)]);
+            }
+            $movement = $this->createSerialMovement(
+                $user, $product, $locationType, $locationId, StockMovementType::ADJUSTMENT,
+                $units->count() * 1000, $units, $reference, $notes, (string) str()->uuid(), null, $level,
+            );
+
+            return ['movement' => $movement, 'units' => $units];
+        });
+    }
+
+    /**
      * Purchase serial units: every serial number becomes a new in-stock unit
      * at the receiving warehouse, posted as one purchase movement.
      *

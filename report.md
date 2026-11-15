@@ -487,3 +487,55 @@ Last full run: **228 tests, 988 assertions** (`php artisan test`, SQLite).
 Known limitations / unverified: no PO line editing after ordering, no partial
 supplier-return UI for serial units, MySQL concurrency and browser printing
 unverified.
+
+## Phase D - Adjustments and stock counts
+
+Status: **done**. Phase C commit: `643f688`.
+
+Migration added: `2026_11_17_000005_create_adjustments_and_counts_tables.php`
+— `stock_counts` (snapshot, drift_acknowledged, adjustment link),
+`stock_count_lines` (system/counted/variance/drift), `stock_adjustments`
+(maker-checker, linked count), `stock_adjustment_lines` (delta + serial data).
+
+Routes added:
+
+- `admin.adjustments.index/create/store/show/approve/reject/cancel`
+  (`/admin/stock/adjustments`)
+- `admin.counts.index/create/store/show/print/submit/approve/
+  acknowledge-drift/cancel` (`/admin/stock/counts`)
+
+Behaviour:
+
+- `AdjustmentService` reuses the opening-request maker-checker pattern:
+  locked approval, `stock.approval.allow_self_approval`, permission +
+  `StockAccess::canWrite`, status guards for double approval, rejection
+  requires a reason, cancellation limited to the requester. Approval posts
+  `adjustment` movements; negative quantities are refused by `StockService`
+  unless `STOCK_ALLOW_NEGATIVE` allows them. Serial lines remove in-stock
+  units (`damaged`/`written_off` status) or create found units with new
+  serial numbers.
+- `StockCountService` snapshots every quantity-tracked product with a stock
+  level at the location (serial products are excluded and documented),
+  rejects a second open count for the same location, computes variance on
+  submit and creates a linked pending `count_correction` adjustment. A count
+  with no variance is auto-approved. Approval checks for stock drift after
+  the snapshot and blocks until the drift is acknowledged
+  (`stock.counts.require_drift_ack`), then posts the variances through
+  `AdjustmentService::approveForCount()`.
+- Printable count sheet with a Code128 barcode per product.
+- Notifications: adjustment submitted -> location users with
+  `adjustments.approve`; approved/rejected/cancelled -> requester; actor is
+  never notified.
+- Sidebar entries for Adjustments and Stock counts behind their permissions.
+
+Tests added: `tests/Feature/AdjustmentTest.php` (6 tests) and
+`tests/Feature/StockCountTest.php` (4 tests) — ledger posting, rejection with
+no effect, double approval, negative-stock guard, serial add/remove,
+notification recipients, variance flow, drift acknowledgement, single open
+count, scoping, 403s, page renders and `stock:rebuild` cleanliness.
+
+Last full run: **238 tests, 1068 assertions** (`php artisan test`, SQLite).
+
+Known limitations / unverified: counts exclude serial-tracked products; a
+rejected count adjustment cancels the count (no separate rejected status);
+MySQL concurrency and browser printing/scanning unverified.

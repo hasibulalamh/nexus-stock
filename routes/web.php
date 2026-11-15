@@ -16,6 +16,8 @@ use App\Http\Controllers\Admin\StockLevelController;
 use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Admin\StockUnitController;
 use App\Http\Controllers\Admin\OpeningStockRequestController;
+use App\Http\Controllers\Admin\AdjustmentController;
+use App\Http\Controllers\Admin\StockCountController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
@@ -150,6 +152,30 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::post('{transfer}/send', [TransferController::class, 'send'])->middleware('can:transfers.send')->name('send');
         Route::post('{transfer}/receive', [TransferController::class, 'receive'])->middleware('can:transfers.receive')->name('receive');
         Route::post('{transfer}/cancel', [TransferController::class, 'cancel'])->middleware('can:transfers.cancel')->name('cancel');
+    });
+
+    // stock adjustments (maker-checker)
+    Route::group(['prefix' => 'stock/adjustments', 'as' => 'adjustments.'], function () {
+        Route::get('/', [AdjustmentController::class, 'index'])->middleware('can:adjustments.view')->name('index');
+        Route::get('create', [AdjustmentController::class, 'create'])->middleware('can:adjustments.create')->name('create');
+        Route::post('store', [AdjustmentController::class, 'store'])->middleware('can:adjustments.create')->name('store');
+        Route::get('{stockAdjustment}', [AdjustmentController::class, 'show'])->middleware('can:adjustments.view')->name('show');
+        Route::post('{stockAdjustment}/approve', [AdjustmentController::class, 'approve'])->middleware('can:adjustments.approve')->name('approve');
+        Route::post('{stockAdjustment}/reject', [AdjustmentController::class, 'reject'])->middleware('can:adjustments.approve')->name('reject');
+        Route::post('{stockAdjustment}/cancel', [AdjustmentController::class, 'cancel'])->middleware('can:adjustments.create')->name('cancel');
+    });
+
+    // stock counts
+    Route::group(['prefix' => 'stock/counts', 'as' => 'counts.'], function () {
+        Route::get('/', [StockCountController::class, 'index'])->middleware('can:counts.view')->name('index');
+        Route::get('create', [StockCountController::class, 'create'])->middleware('can:counts.create')->name('create');
+        Route::post('store', [StockCountController::class, 'store'])->middleware('can:counts.create')->name('store');
+        Route::get('{stockCount}', [StockCountController::class, 'show'])->middleware('can:counts.view')->name('show');
+        Route::get('{stockCount}/print', [StockCountController::class, 'print'])->middleware('can:counts.view')->name('print');
+        Route::post('{stockCount}/submit', [StockCountController::class, 'submit'])->middleware('can:counts.create')->name('submit');
+        Route::post('{stockCount}/approve', [StockCountController::class, 'approve'])->middleware('can:counts.approve')->name('approve');
+        Route::post('{stockCount}/acknowledge-drift', [StockCountController::class, 'acknowledgeDrift'])->middleware('can:counts.create')->name('acknowledge-drift');
+        Route::post('{stockCount}/cancel', [StockCountController::class, 'cancel'])->middleware('can:counts.create')->name('cancel');
     });
 
     // suppliers, purchase orders and goods receipts
