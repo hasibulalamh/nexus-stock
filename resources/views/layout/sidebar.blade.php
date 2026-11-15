@@ -133,7 +133,7 @@
             </ul>
         @endcanany
 
-        @canany(['stock.view', 'stock.movements.view', 'stock.alerts.view', 'stock.opening', 'stock.opening.approve'])
+        @canany(['stock.view', 'stock.movements.view', 'stock.alerts.view', 'stock.opening', 'stock.opening.approve', 'transfers.view'])
             <span class="ns-group">Stock</span>
             <ul class="ns-nav">
                 @can('stock.view')
@@ -162,6 +162,11 @@
                 @can('stock.opening')
                     <li><a class="ns-link {{ request()->routeIs('admin.stock.opening') ? 'active' : '' }}" href="{{ route('admin.stock.opening') }}">
                         <span class="ns-ico"><i class="fas fa-boxes-stacked"></i></span><span>Opening stock</span><i class="ns-dot"></i>
+                    </a></li>
+                @endcan
+                @can('transfers.view')
+                    <li><a class="ns-link {{ request()->routeIs('admin.transfers.*') ? 'active' : '' }}" href="{{ route('admin.transfers.index') }}">
+                        <span class="ns-ico"><i class="fas fa-truck-arrow-right"></i></span><span>Transfers</span><i class="ns-dot"></i>
                     </a></li>
                 @endcan
                 @canany(['stock.opening', 'stock.opening.approve'])

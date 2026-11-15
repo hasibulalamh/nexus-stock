@@ -28,7 +28,15 @@ class PermissionSeeder extends Seeder
             'categories'   => ['view', 'create', 'edit', 'delete'],
             'brands'       => ['view', 'create', 'edit', 'delete'],
             'products'     => ['view', 'create', 'edit', 'delete'],
-            'stock'        => ['view', 'movements.view', 'opening', 'opening.approve', 'thresholds', 'alerts.view', 'alerts.receive', 'alerts.view_all'],
+            'stock'        => ['view', 'movements.view', 'opening', 'opening.approve', 'thresholds', 'alerts.view', 'alerts.receive', 'alerts.view_all', 'discrepancies.resolve', 'kpi.view'],
+            'transfers'    => ['view', 'create', 'send', 'receive', 'cancel'],
+            'suppliers'    => ['view', 'create', 'edit', 'delete'],
+            'purchases'    => ['view', 'create', 'edit', 'approve', 'cancel'],
+            'receiving'    => ['view', 'create'],
+            'adjustments'  => ['view', 'create', 'approve'],
+            'counts'       => ['view', 'create', 'approve'],
+            'reports'      => ['view'],
+            'activitylog'  => ['view'],
         ];
 
         foreach ($modules as $module => $actions) {

@@ -395,6 +395,100 @@ class StockService
         return $summary;
     }
 
+    public function formatQuantityValue(int $thousandths): string
+    {
+        return $this->formatQuantity($thousandths);
+    }
+
+    /**
+     * Move in-stock serial units out of a location into transit (transfer or
+     * return dispatch). The units leave the level immediately; they only
+     * return to stock when receiveSerialUnits() runs.
+     */
+    public function dispatchSerialUnits(
+        User $user,
+        Product $product,
+        string $fromType,
+        int $fromId,
+        array $unitIds,
+        ?array $reference = null,
+        ?string $notes = null,
+        ?string $batchUuid = null,
+        StockMovementType|string $movementType = StockMovementType::TRANSFER_OUT,
+    ): StockMovement {
+        $product = $this->validatedProduct($product);
+        $this->validateLocation($fromType, $fromId);
+        $type = $this->movementType($movementType);
+        if ($product->tracking_type !== 'serial') {
+            throw new InvalidArgumentException('Serial dispatch requires a serial-tracked product.');
+        }
+        if (! StockAccess::canWrite($user, $fromType, $fromId)) {
+            throw new RuntimeException('You cannot write stock at this location.');
+        }
+        $unitIds = array_values(array_unique(array_map('intval', $unitIds)));
+        if ($unitIds === []) {
+            throw new InvalidArgumentException('Serial dispatch requires at least one unit.');
+        }
+        $this->validateSign($type, -count($unitIds) * 1000);
+
+        return DB::transaction(function () use ($user, $product, $fromType, $fromId, $unitIds, $reference, $notes, $batchUuid, $type): StockMovement {
+            $level = $this->lockedLevel($product->id, $fromType, $fromId);
+            $units = StockUnit::query()->where('product_id', $product->id)->whereIn('id', $unitIds)
+                ->orderBy('id')->lockForUpdate()->get();
+            if ($units->count() !== count($unitIds) || $units->contains(fn (StockUnit $unit) => $unit->status !== 'in_stock' || $unit->location_type !== $fromType || (int) $unit->location_id !== $fromId)) {
+                throw new InvalidArgumentException('Every unit must be in stock at the source location.');
+            }
+            $movement = $this->createSerialMovement($user, $product, $fromType, $fromId, $type, -count($unitIds) * 1000, $units, $reference, $notes, $batchUuid, null, $level);
+            $units->each(fn (StockUnit $unit) => $unit->update(['status' => 'in_transit', 'location_type' => null, 'location_id' => null]));
+
+            return $movement;
+        });
+    }
+
+    /**
+     * Receive in-transit serial units into a location.
+     */
+    public function receiveSerialUnits(
+        User $user,
+        Product $product,
+        string $toType,
+        int $toId,
+        array $unitIds,
+        ?array $reference = null,
+        ?string $notes = null,
+        ?string $batchUuid = null,
+        StockMovementType|string $movementType = StockMovementType::TRANSFER_IN,
+    ): StockMovement {
+        $product = $this->validatedProduct($product);
+        $this->validateLocation($toType, $toId);
+        $type = $this->movementType($movementType);
+        if ($product->tracking_type !== 'serial') {
+            throw new InvalidArgumentException('Serial receipt requires a serial-tracked product.');
+        }
+        if (! StockAccess::canWrite($user, $toType, $toId)) {
+            throw new RuntimeException('You cannot write stock at this location.');
+        }
+        $unitIds = array_values(array_unique(array_map('intval', $unitIds)));
+        if ($unitIds === []) {
+            throw new InvalidArgumentException('Serial receipt requires at least one unit.');
+        }
+        $this->validateSign($type, count($unitIds) * 1000);
+
+        return DB::transaction(function () use ($user, $product, $toType, $toId, $unitIds, $reference, $notes, $batchUuid, $type): StockMovement {
+            $level = $this->lockedLevel($product->id, $toType, $toId);
+            $units = StockUnit::query()->where('product_id', $product->id)->whereIn('id', $unitIds)
+                ->orderBy('id')->lockForUpdate()->get();
+            if ($units->count() !== count($unitIds) || $units->contains(fn (StockUnit $unit) => $unit->status !== 'in_transit')) {
+                throw new InvalidArgumentException('Every unit must be in transit.');
+            }
+            $units->each(fn (StockUnit $unit) => $unit->update([
+                'status' => 'in_stock', 'location_type' => $toType, 'location_id' => $toId,
+            ]));
+
+            return $this->createSerialMovement($user, $product, $toType, $toId, $type, count($unitIds) * 1000, $units, $reference, $notes, $batchUuid, null, $level);
+        });
+    }
+
     private function lockedLevel(int $productId, string $locationType, int $locationId): StockLevel
     {
         StockLevel::query()->insertOrIgnore([

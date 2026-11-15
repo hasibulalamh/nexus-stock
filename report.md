@@ -295,3 +295,92 @@ Changed files:
 Validation: `php artisan view:cache` followed by `php artisan view:clear`
 passed, and `php artisan test` passed **199 tests and 775 assertions** on
 SQLite. Browser rendering and MySQL concurrency behavior remain unverified.
+
+---
+
+# Supply-chain build
+
+Work happens on branch `supply-chain-v1` (not merged into `main`). Migrations
+were only authored, never executed against the real MySQL database; the full
+suite runs on SQLite `:memory:`.
+
+## Phase A - Transfers (warehouse -> supplied branch)
+
+Status: **done**.
+
+Commits (this phase): see `git log --oneline supply-chain-v1` for the commit
+titled `feat(transfers): add warehouse-to-branch transfers with serial units`.
+
+Migrations added:
+
+- `2026_11_17_000001_create_document_sequences_table.php` — per-prefix/year
+  counter used by `App\Support\DocumentNumber::next()`; the row is locked so
+  two requests cannot receive the same number on MySQL.
+- `2026_11_17_000002_create_transfers_tables.php` — `transfers`,
+  `transfer_items`, `transfer_item_units` with short explicit index names.
+
+Permissions added to `PermissionSeeder` (not seeded):
+
+- `transfers.view`, `transfers.create`, `transfers.send`,
+  `transfers.receive`, `transfers.cancel`
+- plus forward-looking permissions for later phases: `suppliers.*`,
+  `purchases.*`, `receiving.*`, `adjustments.*`, `counts.*`, `reports.view`,
+  `activitylog.view`, `stock.discrepancies.resolve`, `stock.kpi.view`.
+
+Routes (named, all permission-protected):
+
+- `GET /admin/transfers` (`admin.transfers.index`)
+- `GET /admin/transfers/create` (`admin.transfers.create`)
+- `POST /admin/transfers/store` (`admin.transfers.store`)
+- `GET /admin/transfers/backorders` (`admin.transfers.backorders`)
+- `GET /admin/transfers/{transfer}` (`admin.transfers.show`)
+- `GET /admin/transfers/{transfer}/delivery-note`
+  (`admin.transfers.delivery-note`)
+- `POST /admin/transfers/{transfer}/send` (`admin.transfers.send`)
+- `POST /admin/transfers/{transfer}/receive` (`admin.transfers.receive`)
+- `POST /admin/transfers/{transfer}/cancel` (`admin.transfers.cancel`)
+
+Behaviour:
+
+- Destination branch must belong to the source warehouse; validated in the
+  service (and the form only lists supplied branches). Returns (branch ->
+  supplying warehouse, reason required) share the same state machine and were
+  already wired in this phase.
+- `send()` locks the transfer row, rejects any status other than `draft`, and
+  posts all lines through `StockService` in one transaction. Quantity lines
+  post `transfer_out` / `transfer_in`; serial lines move units `in_stock ->
+  in_transit -> in_stock` through the new
+  `StockService::dispatchSerialUnits()` / `receiveSerialUnits()` methods.
+  Insufficient stock rejects the whole send and changes nothing.
+- `receive()` accepts per-line quantities and unit selections (the service
+  refuses quantities above `sent_qty`); a full receipt is the default.
+- Alerts page now has a real "Send stock" link that prefills warehouse,
+  branch, product and `stock_alert_id`, and shows a "Stock on the way" badge
+  while a sent transfer exists for that product + branch.
+- Printable delivery note with a Code128 barcode of `transfer_no`.
+- Notification on send to destination users holding `transfers.receive`
+  (superadmin/`access_all` users resolved explicitly by
+  `App\Support\StockRecipients`), never the actor.
+
+Notable fix: `AppServiceProvider` registered
+`SendOpeningStockRequestNotification` manually while the framework also
+auto-discovers listeners in `app/Listeners`, which delivered duplicate
+notifications. Both manual registrations were removed.
+
+Tests added: `tests/Feature/TransferTest.php` (10 tests) covering full
+quantity flow with ledger/levels and alert resolution, serial flow, insufficient
+stock atomicity, double send/receive rejection, supplier/branch validation,
+location scoping, 403s, unwritable store, page renders, notification
+recipients and `stock:rebuild` cleanliness.
+
+Last full run: **209 tests, 838 assertions** (`php artisan test`, SQLite).
+
+Known limitations / unverified:
+
+- Partial receipt already creates no `transfer_discrepancies` rows; Phase B
+  adds the discrepancy table and lifecycle. Until then a partial receipt would
+  leave the shortage unaccounted for (the service accepts the shorter quantity
+  and the difference stays out of branch stock, but it is not tracked).
+- Serial quantity on a line is derived from the selected units.
+- MySQL row-lock behaviour, browser rendering and printing were not verified
+  here.

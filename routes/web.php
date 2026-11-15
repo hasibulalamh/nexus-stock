@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\StockLevelController;
 use App\Http\Controllers\Admin\StockAlertController;
 use App\Http\Controllers\Admin\StockUnitController;
 use App\Http\Controllers\Admin\OpeningStockRequestController;
+use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Branch\BranchController;
 use App\Http\Controllers\Warehouse\WarehouseController;
 use Illuminate\Support\Facades\Auth;
@@ -131,6 +132,19 @@ Route::group(['middleware' => ['auth', 'active'], 'prefix' => 'admin', 'as' => '
         Route::get('units/labels', [StockUnitController::class, 'labels'])->middleware('can:stock.view')->name('units.labels');
         Route::get('units/lookup', [StockUnitController::class, 'lookup'])->middleware('can:stock.view')->name('units.lookup');
         Route::post('levels/{stockLevel}/minimum', [StockLevelController::class, 'setMinimum'])->middleware('can:stock.thresholds')->name('levels.minimum');
+    });
+
+    // transfers (warehouse -> supplied branch) and returns (branch -> warehouse)
+    Route::group(['prefix' => 'transfers', 'as' => 'transfers.'], function () {
+        Route::get('/', [TransferController::class, 'index'])->middleware('can:transfers.view')->name('index');
+        Route::get('create', [TransferController::class, 'create'])->middleware('can:transfers.create')->name('create');
+        Route::post('store', [TransferController::class, 'store'])->middleware('can:transfers.create')->name('store');
+        Route::get('backorders', [TransferController::class, 'backorders'])->middleware('can:transfers.view')->name('backorders');
+        Route::get('{transfer}', [TransferController::class, 'show'])->middleware('can:transfers.view')->name('show');
+        Route::get('{transfer}/delivery-note', [TransferController::class, 'deliveryNote'])->middleware('can:transfers.view')->name('delivery-note');
+        Route::post('{transfer}/send', [TransferController::class, 'send'])->middleware('can:transfers.send')->name('send');
+        Route::post('{transfer}/receive', [TransferController::class, 'receive'])->middleware('can:transfers.receive')->name('receive');
+        Route::post('{transfer}/cancel', [TransferController::class, 'cancel'])->middleware('can:transfers.cancel')->name('cancel');
     });
 
     // category
