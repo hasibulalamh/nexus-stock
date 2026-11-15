@@ -232,6 +232,8 @@ Implemented in three logical commits:
 - `feat(stock): add opening request UI and scoped routes`
 - `feat(stock): add opening request notifications and audit events`
 
+Follow-up fix: `f9cf36d fix(stock): accept serial-count opening request lines`.
+
 New migration: `2026_11_16_000001_create_opening_stock_requests_tables.php`.
 It creates `opening_stock_requests` and `opening_stock_request_lines`, including
 the requested status/location index and request-number uniqueness.
